@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo 待办事项 - 全栈教学项目</title>
+    
+    <!-- 引入 CSS 样式文件 -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 
+        【HTML 原理讲解】
+        HTML (HyperText Markup Language) 是超文本标记语言
+        它定义了网页的"骨架"和"结构"
+        - <head> 包含页面的元信息（标题、样式等）
+        - <body> 包含页面的可见内容
+    -->
+    
+    <div class="container">
+        <!-- 页面标题 -->
+        <header>
+            <h1>📝 我的待办事项</h1>
+            <p class="subtitle">一个简单的全栈 Todo 应用</p>
+        </header>
+
+        <!-- 
+            添加待办事项的表单
+            【HTML 表单原理】
+            <form> 用于收集用户输入
+            <input> 是输入框
+            <button> 是按钮
+        -->
+        <form id="todo-form" class="todo-form">
+            <input 
+                type="text" 
+                id="todo-input" 
+                placeholder="输入一个待办事项..." 
+                required
+            >
+            <button type="submit">添加</button>
+        </form>
+
+        <!-- 
+            统计信息区域
+            展示待办事项的总数和已完成数
+        -->
+        <div class="stats">
+            <span>总计: <strong id="total-count">0</strong></span>
+            <span>已完成: <strong id="completed-count">0</strong></span>
+        </div>
+
+        <!-- 
+            待办事项列表
+            【HTML 列表原理】
+            <ul> 是无序列表
+            <li> 是列表项
+            JavaScript 会动态地往这里添加待办事项
+        -->
+        <ul id="todo-list" class="todo-list">
+            <!-- 
+                待办事项会通过 JavaScript 动态生成
+                示例结构：
+                <li class="todo-item">
+                    <span class="todo-text">学习全栈</span>
+                    <button class="delete-btn">删除</button>
+                </li>
+            -->
+        </ul>
+
+        <!-- 空状态提示 -->
+        <div id="empty-state" class="empty-state">
+            <p>🎯 还没有待办事项，添加一个开始吧！</p>
+        </div>
+    </div>
+
+    <!-- 
+        引入 JavaScript 文件
+        【原理】script 标签放在 body 末尾
+        确保页面 HTML 先加载完成，再执行 JavaScript
+    -->
+    <script src="app.js"></script>
+</body>
+</html>

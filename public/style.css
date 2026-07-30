@@ -1,0 +1,237 @@
+/**
+ * ============================================
+ * Todo 应用 - 样式表
+ * ============================================
+ * 
+ * 【CSS 原理讲解】
+ * CSS (Cascading Style Sheets) 是层叠样式表
+ * 它定义了网页的"外观"和"样式"
+ * 
+ * 基本选择器：
+ * - 元素选择器: body { ... } - 选择所有 body 元素
+ * - 类选择器: .container { ... } - 选择 class="container" 的元素
+ * - ID 选择器: #todo-form { ... } - 选择 id="todo-form" 的元素
+ * 
+ * 盒子模型：
+ * - margin: 外边距（元素与元素之间的距离）
+ * - padding: 内边距（元素内容与边框的距离）
+ * - border: 边框
+ */
+
+/* ========== 全局样式 ========== */
+* {
+    /* 清除默认的外边距和内边距 */
+    margin: 0;
+    padding: 0;
+    /* box-sizing: border-box 让 padding 和 border 包含在 width 内 */
+    box-sizing: border-box;
+}
+
+body {
+    /* 字体设置 */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    
+    /* 渐变背景 */
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    
+    /* 最小高度设为视口高度，确保全屏 */
+    min-height: 100vh;
+    
+    /* 使用 Flexbox 布局实现居中 */
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    
+    /* 顶部留白 */
+    padding: 40px 20px;
+}
+
+/* ========== 容器样式 ========== */
+.container {
+    /* 白色背景 */
+    background: #ffffff;
+    
+    /* 圆角 */
+    border-radius: 16px;
+    
+    /* 阴影效果 */
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    
+    /* 宽度限制 */
+    width: 100%;
+    max-width: 500px;
+    
+    /* 内边距 */
+    padding: 40px 30px;
+}
+
+/* ========== 标题样式 ========== */
+header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+header h1 {
+    font-size: 2em;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.subtitle {
+    color: #888;
+    font-size: 0.95em;
+}
+
+/* ========== 表单样式 ========== */
+.todo-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+}
+
+#todo-input {
+    flex: 1;
+    padding: 14px 18px;
+    font-size: 1em;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    outline: none;
+    transition: border-color 0.3s ease;
+}
+
+#todo-input:focus {
+    border-color: #667eea;
+}
+
+.todo-form button {
+    padding: 14px 24px;
+    font-size: 1em;
+    font-weight: 600;
+    color: white;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.todo-form button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.todo-form button:active {
+    transform: translateY(0);
+}
+
+/* ========== 统计信息 ========== */
+.stats {
+    display: flex;
+    justify-content: space-around;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    color: #555;
+}
+
+.stats strong {
+    color: #667eea;
+    font-size: 1.2em;
+}
+
+/* ========== 待办列表样式 ========== */
+.todo-list {
+    list-style: none;
+}
+
+.todo-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+    border-left: 4px solid #667eea;
+}
+
+.todo-item:hover {
+    background: #e9ecef;
+    transform: translateX(4px);
+}
+
+.todo-item.completed {
+    border-left-color: #28a745;
+    opacity: 0.7;
+}
+
+.todo-item.completed .todo-text {
+    text-decoration: line-through;
+    color: #888;
+}
+
+.todo-text {
+    flex: 1;
+    font-size: 1em;
+    color: #333;
+    word-break: break-word;
+    margin-right: 15px;
+}
+
+/* ========== 复选框样式 ========== */
+.todo-checkbox {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+    cursor: pointer;
+    accent-color: #667eea;
+}
+
+/* ========== 删除按钮样式 ========== */
+.delete-btn {
+    padding: 6px 14px;
+    font-size: 0.85em;
+    color: #ff4757;
+    background: rgba(255, 71, 87, 0.1);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.delete-btn:hover {
+    background: #ff4757;
+    color: white;
+}
+
+/* ========== 空状态样式 ========== */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #aaa;
+}
+
+.empty-state.hidden {
+    display: none;
+}
+
+/* ========== 响应式设计 ========== */
+@media (max-width: 600px) {
+    .container {
+        padding: 25px 20px;
+    }
+    
+    header h1 {
+        font-size: 1.5em;
+    }
+    
+    .todo-form {
+        flex-direction: column;
+    }
+    
+    .todo-form button {
+        width: 100%;
+    }
+}
