@@ -207,14 +207,7 @@ def delete_item(item_id: str):
     raise HTTPException(status_code=404, detail="Item not found")
 
 
-@router.get("/stats")
-def stats():
-    items = _all_items()
-    counts = {"total": len(items)}
-    for t in ("secondhand", "lostfound", "emergency", "discussion"):
-        counts[t] = sum(1 for e in items if e.get("type") == t)
-    counts["active"] = sum(1 for e in items if e.get("status", "active") == "active")
-    return counts
+# 统计接口已迁移到生产路由 stats.py（PostGIS 驱动），由 main.py 以 /api 前缀挂载为 /api/stats。
 
 
 @router.post("/cluster")

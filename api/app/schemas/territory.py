@@ -16,6 +16,10 @@ class DivideRequest(BaseModel):
     points: list[dict] | None = Field(
         default=None, description="直接传入点集（覆盖数据源）；每项含 longitude/latitude/weight"
     )
+    source: str = Field(
+        default="auto",
+        description="点集数据源：auto（优先数据库，失败回退文件）| database | file",
+    )
 
 
 class RegionOut(BaseModel):

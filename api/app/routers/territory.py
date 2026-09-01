@@ -6,8 +6,11 @@ from pathlib import Path
 import numpy as np
 from fastapi import APIRouter, HTTPException
 from shapely.geometry import mapping
+from sqlalchemy import func, select
 
 from app.algorithms import divide, random_divide, grid_divide, kmeans_divide
+from app.core.database import SessionLocal
+from app.models.event import Event
 from app.schemas.territory import (
     BenchmarkResponse,
     BenchmarkRow,
@@ -22,15 +25,39 @@ ROOT = Path(__file__).resolve().parents[3]
 DATA_FILE = ROOT / "data" / "events.json"
 
 
+def _load_points_from_db(type_filter):
+    """从 PostGIS 读取事件点（生产数据源）。连不上或表缺失则抛异常，由调用方决定回退。"""
+    with SessionLocal() as db:
+        stmt = select(Event.longitude, Event.latitude, Event.weight)
+        if type_filter:
+            stmt = stmt.where(Event.type.in_(type_filter))
+        rows = db.execute(stmt).all()
+    if not rows:
+        raise ValueError("event 表为空，请先运行 seed 灌库")
+    xy = np.array([[r[0], r[1]] for r in rows], dtype=float)
+    w = np.array([float(r[2]) for r in rows], dtype=float)
+    return xy, w, "database"
+
+
 def _load_points(req: DivideRequest):
-    """点集来源优先级：请求体 > 数据库 > 本地造数文件（无 DB 时的降级）。"""
+    """点集来源优先级：请求体 > 数据库(auto/database) > 本地造数文件（降级）。"""
     if req.points:
         return (
             np.array([[p["longitude"], p["latitude"]] for p in req.points]),
             np.array([float(p.get("weight", 1.0)) for p in req.points]),
             "request",
         )
-    # 数据库优先（此处为清晰起见直接读本地文件，DB 接入后在 repositories 层替换）
+
+    mode = (req.source or "auto").lower()
+    if mode in ("auto", "database"):
+        try:
+            return _load_points_from_db(req.type_filter)
+        except Exception as e:
+            if mode == "database":
+                raise HTTPException(status_code=502, detail=f"数据库读取失败：{e}")
+            # auto：数据库不可用 → 回退本地文件，保证演示链路不中断
+            print(f"[warn] 数据库读取失败，回退本地文件：{e}")
+
     if DATA_FILE.exists():
         doc = json.loads(DATA_FILE.read_text(encoding="utf-8"))
         pts = doc["events"]
