@@ -20,6 +20,10 @@ class DivideRequest(BaseModel):
         default="auto",
         description="点集数据源：auto（优先数据库，失败回退文件）| database | file",
     )
+    use_pg_voronoi: bool = Field(
+        default=False,
+        description="边界是否由 PostGIS ST_VoronoiPolygons 生成（生产级几何）；需数据库可用，失败回退本地 shapely",
+    )
 
 
 class RegionOut(BaseModel):

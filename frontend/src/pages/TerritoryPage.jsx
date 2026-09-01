@@ -31,7 +31,7 @@ function TerritoryPage() {
   const resultRef = useRef(null)      // 最新划分结果（避免 zoomend 闭包拿到旧值）
   const refreshRef = useRef(null)     // 最新 refreshPointLayer
 
-  const [params, setParams] = useState({ k: 10, lam: 2.0, typeFilter: [] })
+  const [params, setParams] = useState({ k: 10, lam: 2.0, typeFilter: [], usePgVoronoi: false })
   const [result, setResult] = useState(null)
   const [metrics, setMetrics] = useState(null)
   const [bench, setBench] = useState(null)
@@ -219,7 +219,8 @@ function TerritoryPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           k: p.k, lam: p.lam, mu: p.mu, seed: p.seed,
-          type_filter: p.typeFilter.length ? p.typeFilter : undefined
+          type_filter: p.typeFilter.length ? p.typeFilter : undefined,
+          use_pg_voronoi: p.usePgVoronoi || false
         })
       })
       const data = await res.json()
@@ -315,20 +316,35 @@ function TerritoryPage() {
             </div>
           </div>
         </div>
-        <div className="control-row" style={{ marginTop: '.75rem' }}>
-          <button className="btn btn-primary" onClick={handleDivide} disabled={loading}>
-            {loading ? '计算中…' : '▶ 执行划分'}
-          </button>
-          <button className="btn btn-outline" onClick={handleBenchmark}>
-            📊 运行对比实验
-          </button>
-          <button className="btn btn-outline" onClick={toggle3D}>
-            {view3D ? '⬇ 退出 3D 视图' : '🔲 3D 负载视图'}
-          </button>
-        </div>
+          <div className="control-row" style={{ marginTop: '.75rem' }}>
+            <button className="btn btn-primary" onClick={handleDivide} disabled={loading}>
+              {loading ? '计算中…' : '▶ 执行划分'}
+            </button>
+            <button className="btn btn-outline" onClick={handleBenchmark}>
+              📊 运行对比实验
+            </button>
+            <button className="btn btn-outline" onClick={toggle3D}>
+              {view3D ? '⬇ 退出 3D 视图' : '🔲 3D 负载视图'}
+            </button>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '.4rem', fontSize: '.85rem', marginLeft: 'auto' }}>
+              <input type="checkbox" checked={params.usePgVoronoi}
+                onChange={e => setParams({ ...params, usePgVoronoi: e.target.checked })} />
+              🛰 PostGIS 边界 (ST_VoronoiPolygons)
+            </label>
+          </div>
       </div>
 
       {metrics && <MetricPanel metrics={metrics} />}
+
+      {result && result.source && result.source.includes('pg_voronoi') && (
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: '.4rem', marginTop: '.75rem',
+          background: '#ecfdf5', border: '1px solid #6ee7b7', color: '#065f46',
+          padding: '.4rem .8rem', borderRadius: 8, fontSize: '.82rem', fontWeight: 600
+        }}>
+          🛰 边界由 PostGIS ST_VoronoiPolygons 生成（生产级几何）
+        </div>
+      )}
 
       {bench && (
         <div className="cluster-results" style={{ marginBottom: '1.5rem' }}>

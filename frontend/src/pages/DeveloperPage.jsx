@@ -110,7 +110,7 @@ function DeveloperPage() {
   const [tab, setTab] = useState('playground')
 
   // ---- 调试器状态 ----
-  const [params, setParams] = useState({ k: 12, lam: 2.0, mu: 0.1, seed: 42, typeFilter: [] })
+  const [params, setParams] = useState({ k: 12, lam: 2.0, mu: 0.1, seed: 42, typeFilter: [], usePgVoronoi: false })
   const [run, setRun] = useState(null)            // /api/territory/divide 结果
   const [running, setRunning] = useState(false)
   const [showSave, setShowSave] = useState(false)
@@ -151,7 +151,8 @@ function DeveloperPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           k: params.k, lam: params.lam, mu: params.mu, seed: params.seed,
-          type_filter: params.typeFilter.length ? params.typeFilter : undefined
+          type_filter: params.typeFilter.length ? params.typeFilter : undefined,
+          use_pg_voronoi: params.usePgVoronoi || false
         })
       })
       if (!res.ok) throw new Error('divide failed')
@@ -326,6 +327,11 @@ function DeveloperPage() {
               </div>
             </div>
             <div className="control-row" style={{ marginTop: '1rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '.4rem', fontSize: '.85rem' }}>
+                <input type="checkbox" checked={params.usePgVoronoi}
+                  onChange={e => setParams({ ...params, usePgVoronoi: e.target.checked })} />
+                🛰 PostGIS 边界 (ST_VoronoiPolygons)
+              </label>
               <button className="btn btn-primary" onClick={handleDivide} disabled={running}>
                 {running ? '计算中…' : '▶ 运行划分'}
               </button>

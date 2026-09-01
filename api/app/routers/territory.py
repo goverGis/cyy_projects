@@ -5,8 +5,8 @@ from pathlib import Path
 
 import numpy as np
 from fastapi import APIRouter, HTTPException
-from shapely.geometry import mapping
-from sqlalchemy import func, select
+from shapely.geometry import mapping, shape as shapely_shape, Point
+from sqlalchemy import func, select, text
 
 from app.algorithms import divide, random_divide, grid_divide, kmeans_divide
 from app.core.database import SessionLocal
@@ -23,6 +23,43 @@ router = APIRouter(prefix="/api/territory", tags=["territory"])
 
 ROOT = Path(__file__).resolve().parents[3]
 DATA_FILE = ROOT / "data" / "events.json"
+
+
+def _pg_voronoi_polygons(centroids, envelope):
+    """用 PostGIS ST_VoronoiPolygons 生成 K 个片区的 Voronoi 边界（生产级几何）。
+
+    算法照常算出 K 个片区中心（centroids，lng/lat），这里把边界生成下推到数据库：
+    ST_Collect 中心点 → ST_VoronoiPolygons（裁剪到数据外接框）→ ST_Dump 拆成 K 个 cell。
+    按「cell 包含其种子中心」把 K 个 cell 与 K 个片区序号一一匹配后返回。
+    """
+    pts = ", ".join(
+        f"ST_SetSRID(ST_MakePoint({float(lng):.8f}, {float(lat):.8f}), 4326)"
+        for lng, lat in centroids
+    )
+    minlng, minlat, maxlng, maxlat = envelope
+    sql = text(
+        f"""
+        SELECT ST_AsGeoJSON(
+            (ST_Dump(ST_VoronoiPolygons(
+                ST_Collect(ARRAY[{pts}]),
+                0.0,
+                ST_MakeEnvelope(:minlng, :minlat, :maxlng, :maxlat, 4326)
+            ))).geom
+        ) AS geo
+        """
+    )
+    with SessionLocal() as db:
+        rows = db.execute(
+            sql, {"minlng": minlng, "minlat": minlat, "maxlng": maxlng, "maxlat": maxlat}
+        ).all()
+    geoms = [shapely_shape(json.loads(r[0])) for r in rows]
+    matched = [None] * len(centroids)
+    for geo in geoms:
+        for r, (lng, lat) in enumerate(centroids):
+            if matched[r] is None and geo.covers(Point(lng, lat)):
+                matched[r] = geo
+                break
+    return matched
 
 
 def _load_points_from_db(type_filter):
@@ -78,6 +115,25 @@ def divide_endpoint(req: DivideRequest):
         raise HTTPException(status_code=400, detail=f"点集数量 {len(xy)} 小于片区数 {req.k}")
 
     res = divide(xy, w, req.k, lam=req.lam, mu=req.mu, seed=req.seed)
+
+    # 生产级边界：用 PostGIS ST_VoronoiPolygons 生成，覆盖本地 shapely 结果
+    if req.use_pg_voronoi:
+        try:
+            pad = (xy[:, 0].max() - xy[:, 0].min()) * 0.02 + 1e-4
+            env = (
+                float(xy[:, 0].min()) - pad, float(xy[:, 1].min()) - pad,
+                float(xy[:, 0].max()) + pad, float(xy[:, 1].max()) + pad,
+            )
+            pg_polys = _pg_voronoi_polygons(res.centroids, env)
+            replaced = 0
+            for r in range(req.k):
+                if pg_polys[r] is not None:
+                    res.polygons[r] = pg_polys[r]
+                    replaced += 1
+            source = f"{source}+pg_voronoi"
+            print(f"[info] 边界由 PostGIS ST_VoronoiPolygons 生成（{replaced}/{req.k} 个片区）")
+        except Exception as e:
+            print(f"[warn] PostGIS Voronoi 失败，回退本地 shapely：{e}")
 
     regions = []
     features = []
