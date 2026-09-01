@@ -10,6 +10,7 @@ from sqlalchemy import func, select, text
 
 from app.algorithms import divide, random_divide, grid_divide, kmeans_divide
 from app.core.database import SessionLocal
+from app.models.beijing import BeijingDistrict  # noqa: F401  确保 create_all 注册该表
 from app.models.event import Event
 from app.schemas.territory import (
     BenchmarkResponse,
@@ -25,33 +26,79 @@ ROOT = Path(__file__).resolve().parents[3]
 DATA_FILE = ROOT / "data" / "events.json"
 
 
-def _pg_voronoi_polygons(centroids, envelope):
+def _load_beijing_union_wkt():
+    """读取北京行政区并集的 WKT（用于把 Voronoi 边界裁剪到真实行政区）。
+
+    表不存在或为空则返回 None，调用方据此跳过裁剪。
+    """
+    try:
+        with SessionLocal() as db:
+            wkt = db.execute(
+                text("SELECT ST_AsText(ST_Union(geom)) FROM beijing_districts")
+            ).scalar()
+        return wkt
+    except Exception:
+        return None
+
+
+def _pg_voronoi_polygons(centroids, envelope, clip_to_bj=False):
     """用 PostGIS ST_VoronoiPolygons 生成 K 个片区的 Voronoi 边界（生产级几何）。
 
     算法照常算出 K 个片区中心（centroids，lng/lat），这里把边界生成下推到数据库：
     ST_Collect 中心点 → ST_VoronoiPolygons（裁剪到数据外接框）→ ST_Dump 拆成 K 个 cell。
     按「cell 包含其种子中心」把 K 个 cell 与 K 个片区序号一一匹配后返回。
+
+    若 clip_to_bj=True 且 beijing_districts 表有数据，则再对每个 cell 做
+    ST_Intersection(cell, 北京行政区并集)，使生产边界贴合真实行政区划。
     """
     pts = ", ".join(
         f"ST_SetSRID(ST_MakePoint({float(lng):.8f}, {float(lat):.8f}), 4326)"
         for lng, lat in centroids
     )
     minlng, minlat, maxlng, maxlat = envelope
-    sql = text(
-        f"""
-        SELECT ST_AsGeoJSON(
-            (ST_Dump(ST_VoronoiPolygons(
-                ST_Collect(ARRAY[{pts}]),
-                0.0,
-                ST_MakeEnvelope(:minlng, :minlat, :maxlng, :maxlat, 4326)
-            ))).geom
-        ) AS geo
-        """
-    )
+    bj = _load_beijing_union_wkt() if clip_to_bj else None
+
+    if bj:
+        # 裁剪到北京行政区：只保留与行政区并集相交的 cell，并做 ST_Intersection
+        sql = text(
+            f"""
+            WITH voronoi AS (
+                SELECT (ST_Dump(ST_VoronoiPolygons(
+                    ST_Collect(ARRAY[{pts}]),
+                    0.0,
+                    ST_MakeEnvelope(:minlng, :minlat, :maxlng, :maxlat, 4326)
+                ))).geom AS cell
+            )
+            SELECT ST_AsGeoJSON(
+                ST_Intersection(v.cell, ST_GeomFromText(:bj, 4326))
+            ) AS geo
+            FROM voronoi v
+            WHERE ST_Intersects(v.cell, ST_GeomFromText(:bj, 4326))
+            """
+        )
+        params = {
+            "minlng": minlng, "minlat": minlat,
+            "maxlng": maxlng, "maxlat": maxlat, "bj": bj,
+        }
+    else:
+        sql = text(
+            f"""
+            SELECT ST_AsGeoJSON(
+                (ST_Dump(ST_VoronoiPolygons(
+                    ST_Collect(ARRAY[{pts}]),
+                    0.0,
+                    ST_MakeEnvelope(:minlng, :minlat, :maxlng, :maxlat, 4326)
+                ))).geom
+            ) AS geo
+            """
+        )
+        params = {
+            "minlng": minlng, "minlat": minlat,
+            "maxlng": maxlng, "maxlat": maxlat,
+        }
+
     with SessionLocal() as db:
-        rows = db.execute(
-            sql, {"minlng": minlng, "minlat": minlat, "maxlng": maxlng, "maxlat": maxlat}
-        ).all()
+        rows = db.execute(sql, params).all()
     geoms = [shapely_shape(json.loads(r[0])) for r in rows]
     matched = [None] * len(centroids)
     for geo in geoms:
@@ -59,7 +106,7 @@ def _pg_voronoi_polygons(centroids, envelope):
             if matched[r] is None and geo.covers(Point(lng, lat)):
                 matched[r] = geo
                 break
-    return matched
+    return matched, bool(bj)
 
 
 def _load_points_from_db(type_filter):
@@ -124,14 +171,17 @@ def divide_endpoint(req: DivideRequest):
                 float(xy[:, 0].min()) - pad, float(xy[:, 1].min()) - pad,
                 float(xy[:, 0].max()) + pad, float(xy[:, 1].max()) + pad,
             )
-            pg_polys = _pg_voronoi_polygons(res.centroids, env)
+            pg_polys, clipped = _pg_voronoi_polygons(
+                res.centroids, env, clip_to_bj=req.clip_to_district
+            )
             replaced = 0
             for r in range(req.k):
                 if pg_polys[r] is not None:
                     res.polygons[r] = pg_polys[r]
                     replaced += 1
-            source = f"{source}+pg_voronoi"
-            print(f"[info] 边界由 PostGIS ST_VoronoiPolygons 生成（{replaced}/{req.k} 个片区）")
+            source = f"{source}+pg_voronoi" + ("+bj" if clipped else "")
+            tag = "PostGIS ST_VoronoiPolygons" + (" + 北京行政区裁剪" if clipped else "")
+            print(f"[info] 边界由 {tag} 生成（{replaced}/{req.k} 个片区）")
         except Exception as e:
             print(f"[warn] PostGIS Voronoi 失败，回退本地 shapely：{e}")
 

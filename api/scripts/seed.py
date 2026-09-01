@@ -26,6 +26,7 @@ from shapely.geometry import Point
 from sqlalchemy import text
 
 from app.core.database import Base, SessionLocal, engine
+from app.models.beijing import BeijingDistrict
 from app.models.event import Event
 
 ROOT = Path(__file__).resolve().parents[2]

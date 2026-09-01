@@ -141,7 +141,8 @@ def test_pg_voronoi_integration():
         (116.50, 39.95), (116.42, 39.85),
     ]
     env = (116.30, 39.80, 116.60, 40.05)
-    polys = _pg_voronoi_polygons(cents, env)
+    polys, clipped = _pg_voronoi_polygons(cents, env)
+    assert clipped is False
     assert len(polys) == len(cents)
     matched = [p for p in polys if p is not None and p.is_valid]
     assert len(matched) == len(cents)
@@ -161,3 +162,48 @@ def test_divide_endpoint_pg_voronoi():
     body = r.json()
     assert "pg_voronoi" in body["source"]
     assert len(body["geojson"]["features"]) == 12
+
+
+@pytest.mark.skipif(not _db_available(), reason="未检测到可用的 PostGIS")
+def test_pg_voronoi_clip_to_district():
+    """裁剪到北京行政区：结果多边形应被 beijing_districts 并集完整包含。"""
+    import json as _json
+
+    from sqlalchemy import text
+
+    from app.routers.territory import _pg_voronoi_polygons
+    cents = [
+        (116.40, 39.90), (116.45, 39.92), (116.38, 39.88),
+        (116.50, 39.95), (116.42, 39.85),
+    ]
+    env = (116.30, 39.80, 116.60, 40.05)
+    polys, clipped = _pg_voronoi_polygons(cents, env, clip_to_bj=True)
+    assert clipped is True
+    assert all(p is not None and p.is_valid for p in polys)
+
+    from app.core.database import SessionLocal
+    with SessionLocal() as db:
+        for p in polys:
+            ok = db.execute(
+                text(
+                    "SELECT ST_Within("
+                    "ST_GeomFromGeoJSON(:g)::geometry, "
+                    "(SELECT ST_Union(geom) FROM beijing_districts))"
+                ),
+                {"g": _json.dumps({"type": "Polygon", "coordinates": [list(p.exterior.coords)]})},
+            ).scalar()
+            assert ok, "裁剪后的片区未被北京行政区并集包含"
+
+
+@pytest.mark.skipif(not _db_available(), reason="未检测到可用的 PostGIS")
+def test_divide_endpoint_clip_source_suffix():
+    """HTTP 接口带 clip_to_district 时，source 应包含 +bj。"""
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    r = client.post("/api/territory/divide", json={
+        "k": 8, "lam": 2.0, "mu": 0.1, "seed": 42,
+        "source": "database", "use_pg_voronoi": True, "clip_to_district": True,
+    })
+    assert r.status_code == 200
+    assert r.json()["source"].endswith("+bj")

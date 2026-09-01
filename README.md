@@ -22,6 +22,7 @@
 
 - 🧭 **区域智能划分**：调 K / λ（均衡权重）/ μ（紧凑度）/ 种子，实时生成片区与指标
 - 🛰 **生产级边界**：勾选「PostGIS 边界」后，片区边界由数据库 `ST_VoronoiPolygons` 直接生成
+- 🗺 **行政区裁剪**：在 PostGIS 边界基础上再 `ST_Intersection` 到北京行政区（`beijing_districts` 表），片区边界贴合真实行政区划
 - 🔲 **3D 负载视图**：按各片区业务量权重拉伸 3D 柱体，直观看哪里过载
 - 📊 **海量数据优化**：点层抽稀（聚合桶）+ 视窗分页，数千点仍可流畅渲染
 - 🧪 **算法参数市场**：调参 → 保存 → 浏览/对比不同 (K, λ, μ) 方案 → 复制分享链接 → 一键应用到大图
@@ -68,6 +69,12 @@ psql -d webgis_territory -c "CREATE EXTENSION postgis;"
 # 灌入造数器生成的 4000 条北京事件
 cd api
 python -m scripts.seed          # 建表 + 导入 data/events.json
+
+# 灌入北京行政区边界（生产级片区裁剪底图）
+#   默认用 16 区真实质心做 Voronoi 镶嵌生成近似边界；
+#   若要真实边界，先把 DataV GeoAtlas 的 110000_full.json 放到
+#   api/data/beijing_districts.json（同名结构），再运行本命令即可。
+python -m scripts.load_beijing_districts
 ```
 
 > 无 PostGIS 也能跑：后端自动回退到 `data/events.json` 文件，划分/统计照常可用。
@@ -97,7 +104,7 @@ node generate.mjs              # 输出 ../data/events.json（北京 10 热点�
 ```bash
 cd api
 .venv/Scripts/python -m pytest -q
-# 12 passed（含 2 个真实 PostGIS 集成测试，需先建库灌数）
+# 14 passed（含 3 个真实 PostGIS 集成测试：Voronoi / 行政区裁剪 / HTTP 接口，需先建库灌数）
 ```
 
 ---
@@ -118,6 +125,7 @@ J = J_dist + λ·J_balance + μ·J_shape
 2. **容量约束 Lloyd 迭代**：就近分配 + 容量兜底（每片业务量 ∈ [均值×0.5, 均值×1.5]）
 3. **move / swap 局部搜索**：在容量硬约束下优化目标函数
 4. **Voronoi 边界**：以片区中心生成 Voronoi 多边形（默认本地 shapely，生产模式用 `ST_VoronoiPolygons`）
+5. **行政区裁剪**（生产增强）：`ST_VoronoiPolygons` 生成后，再 `ST_Intersection` 到 `beijing_districts` 表（北京行政区并集），使片区边界贴合真实行政区划而非数据外接框
 
 ---
 
@@ -125,7 +133,7 @@ J = J_dist + λ·J_balance + μ·J_shape
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| POST | `/api/territory/divide` | 区域划分（`source`: auto/file/database，`use_pg_voronoi`: 生产边界） |
+| POST | `/api/territory/divide` | 区域划分（`source`: auto/file/database；`use_pg_voronoi`: 生产边界；`clip_to_district`: 再裁剪到北京行政区） |
 | GET | `/api/territory/benchmark?k=` | 四基线对比 |
 | GET | `/api/events` | 事件列表（PostGIS，支持 bbox 空间过滤） |
 | GET | `/api/stats` | 按类型统计（PostGIS） |
@@ -144,9 +152,10 @@ trae/
 │  ├─ app/
 │  │  ├─ algorithms/     容量约束划分核心算法（纯 numpy+shapely）
 │  │  ├─ routers/        territory / events / stats / legacy_items / schemes
-│  │  ├─ models/          Event / Plan / Territory / Assignment (ORM)
+│  │  ├─ models/          Event / Plan / Territory / Assignment / BeijingDistrict (ORM)
 │  │  └─ core/            config / database
 │  ├─ scripts/seed.py     PostGIS 灌库脚本
+│  ├─ scripts/load_beijing_districts.py  北京行政区边界灌库（生产裁剪底图）
 │  └─ tests/             pytest 单元测试 + 集成测试
 ├─ frontend/             React 前端
 │  └─ src/pages/         TerritoryPage / DeveloperPage(参数市场) / 业务页

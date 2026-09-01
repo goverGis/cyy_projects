@@ -31,7 +31,7 @@ function TerritoryPage() {
   const resultRef = useRef(null)      // 最新划分结果（避免 zoomend 闭包拿到旧值）
   const refreshRef = useRef(null)     // 最新 refreshPointLayer
 
-  const [params, setParams] = useState({ k: 10, lam: 2.0, typeFilter: [], usePgVoronoi: false })
+  const [params, setParams] = useState({ k: 10, lam: 2.0, typeFilter: [], usePgVoronoi: false, clipToDistrict: false })
   const [result, setResult] = useState(null)
   const [metrics, setMetrics] = useState(null)
   const [bench, setBench] = useState(null)
@@ -220,7 +220,8 @@ function TerritoryPage() {
         body: JSON.stringify({
           k: p.k, lam: p.lam, mu: p.mu, seed: p.seed,
           type_filter: p.typeFilter.length ? p.typeFilter : undefined,
-          use_pg_voronoi: p.usePgVoronoi || false
+          use_pg_voronoi: p.usePgVoronoi || false,
+          clip_to_district: p.clipToDistrict || false
         })
       })
       const data = await res.json()
@@ -331,6 +332,13 @@ function TerritoryPage() {
                 onChange={e => setParams({ ...params, usePgVoronoi: e.target.checked })} />
               🛰 PostGIS 边界 (ST_VoronoiPolygons)
             </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '.4rem', fontSize: '.85rem' }}
+              title="勾选「🛰 PostGIS 边界」后可用：把 Voronoi 片区再裁剪到北京行政区边界（beijing_districts 表）">
+              <input type="checkbox" checked={params.clipToDistrict}
+                disabled={!params.usePgVoronoi}
+                onChange={e => setParams({ ...params, clipToDistrict: e.target.checked })} />
+              🗺 裁剪到北京行政区
+            </label>
           </div>
       </div>
 
@@ -343,6 +351,7 @@ function TerritoryPage() {
           padding: '.4rem .8rem', borderRadius: 8, fontSize: '.82rem', fontWeight: 600
         }}>
           🛰 边界由 PostGIS ST_VoronoiPolygons 生成（生产级几何）
+          {result.source.includes('+bj') && ' · 已裁剪到北京行政区'}
         </div>
       )}
 

@@ -24,6 +24,10 @@ class DivideRequest(BaseModel):
         default=False,
         description="边界是否由 PostGIS ST_VoronoiPolygons 生成（生产级几何）；需数据库可用，失败回退本地 shapely",
     )
+    clip_to_district: bool = Field(
+        default=False,
+        description="生产级边界是否再裁剪到北京行政区（beijing_districts 表）；需先运行 scripts.load_beijing_districts 灌库",
+    )
 
 
 class RegionOut(BaseModel):
