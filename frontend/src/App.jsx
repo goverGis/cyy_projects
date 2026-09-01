@@ -6,7 +6,7 @@ import LostFoundPage from './pages/LostFoundPage'
 import EmergencyPage from './pages/EmergencyPage'
 import DiscussionPage from './pages/DiscussionPage'
 import DeveloperPage from './pages/DeveloperPage'
-import ClusterPage from './pages/ClusterPage'
+import TerritoryPage from './pages/TerritoryPage'
 
 function App() {
   return (
@@ -33,7 +33,7 @@ function App() {
             开发者平台
           </NavLink>
           <NavLink to="/cluster" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-            区域聚类
+            区域划分
           </NavLink>
         </nav>
       </header>
@@ -45,7 +45,7 @@ function App() {
           <Route path="/emergency" element={<EmergencyPage />} />
           <Route path="/discussion" element={<DiscussionPage />} />
           <Route path="/developer" element={<DeveloperPage />} />
-          <Route path="/cluster" element={<ClusterPage />} />
+          <Route path="/cluster" element={<TerritoryPage />} />
         </Routes>
       </main>
     </div>

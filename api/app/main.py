@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routers import events, stats, territory
+from app.routers import territory, legacy_items
 
 app = FastAPI(
     title="区域智能划分系统 API",
@@ -23,9 +23,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(events.router, prefix="/api")
-app.include_router(stats.router, prefix="/api")
+# 演示模式（无 PostGIS 也可跑）：挂载文件型兼容路由 + 区域划分路由。
+# events / stats（PostGIS 持久化版）在此不挂载，避免无库时连接报错；
+# 接入 PostGIS 并 seed 后改为挂载它们即可。
+app.include_router(legacy_items.router, prefix="/api")
 app.include_router(territory.router, prefix="")
+
+# 生产模式（接入 PostGIS 后启用）：
+# app.include_router(events.router, prefix="/api")
+# app.include_router(stats.router, prefix="/api")
 
 
 @app.get("/api/health", tags=["system"])
