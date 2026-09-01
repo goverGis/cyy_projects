@@ -38,6 +38,7 @@ function TerritoryPage() {
   const [detailTotal, setDetailTotal] = useState(0)
   const [view3D, setView3D] = useState(false)
   const view3DRef = useRef(false)
+  const [appliedName, setAppliedName] = useState(null)   // 来自参数市场的应用方案名
 
   // 渲染片区 Voronoi 多边形（与抽稀无关，始终全量）
   // is3D=true 时按业务量权重拉伸成 3D 柱体（高度=权重，直观看出哪片过载）
@@ -149,6 +150,7 @@ function TerritoryPage() {
     })
     mapInstance.current = map
     setMapReady(true)
+    if (resultRef.current) renderRegions(resultRef.current, view3DRef.current)  // 应用方案可能先于地图就绪
     map.on('zoomend', () => refreshRef.current && refreshRef.current())
     return () => {
       regionLayerRef.current.forEach(o => o.setMap && o.setMap(null))
@@ -160,14 +162,38 @@ function TerritoryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleDivide = async () => {
+  // 从参数市场「应用到大图」：挂载时若 localStorage 存有方案 id，则自动加载并渲染
+  const appliedRef = useRef(false)
+  useEffect(() => {
+    if (appliedRef.current) return
+    appliedRef.current = true
+    const sid = localStorage.getItem('applied_scheme_id')
+    if (!sid) return
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/schemes/${sid}`)
+        if (!res.ok) return
+        const s = await res.json()
+        setAppliedName(s.name)
+        handleDivide({
+          k: s.params.k, lam: s.params.lam, mu: s.params.mu, seed: s.params.seed,
+          typeFilter: s.params.type_filter || []
+        })
+      } catch (e) { console.error('应用方案加载失败', e) }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleDivide = async (override) => {
+    const p = override || params
+    if (!override) setAppliedName(null)   // 手动重跑即退出「查看方案」状态
     setLoading(true)
     try {
       const res = await fetch('/api/territory/divide', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          k: params.k, lam: params.lam,
-          type_filter: params.typeFilter.length ? params.typeFilter : undefined
+          k: p.k, lam: p.lam, mu: p.mu, seed: p.seed,
+          type_filter: p.typeFilter.length ? p.typeFilter : undefined
         })
       })
       const data = await res.json()
@@ -213,6 +239,28 @@ function TerritoryPage() {
           容量约束聚类 · Voronoi 边界 · 业务量均衡（λ 为权衡参数）
         </p>
       </div>
+
+      {appliedName && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '1rem',
+          background: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', border: '1px solid #c7d2fe',
+          borderRadius: '12px', padding: '.9rem 1.25rem', marginBottom: '1.5rem'
+        }}>
+          <span style={{ fontSize: '1.2rem' }}>🗺️</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 600, color: '#3730a3' }}>正在大图查看方案：{appliedName}</div>
+            <div style={{ fontSize: '.82rem', color: 'var(--text-secondary)' }}>
+              该方案来自「参数市场」。调节上方 K / λ 后重新执行，或清除回到默认划分。
+            </div>
+          </div>
+          <button className="btn btn-secondary" onClick={() => {
+            localStorage.removeItem('applied_scheme_id')
+            setAppliedName(null)
+            setParams({ k: 10, lam: 2.0, typeFilter: [] })
+            handleDivide({ k: 10, lam: 2.0, mu: 0.1, seed: 42, typeFilter: [] })
+          }}>清除应用</button>
+        </div>
+      )}
 
       <div className="cluster-controls">
         <div className="control-row">

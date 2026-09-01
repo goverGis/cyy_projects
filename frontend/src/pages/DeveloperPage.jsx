@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import MetricPanel from '../components/MetricPanel'
 import RegionChipList from '../components/RegionChipList'
 
@@ -96,6 +97,7 @@ function metricRow(label, vals, betterLow = false) {
 }
 
 function DeveloperPage() {
+  const navigate = useNavigate()
   const [tab, setTab] = useState('playground')
 
   // ---- 调试器状态 ----
@@ -180,6 +182,12 @@ function DeveloperPage() {
     })
     setTab('playground')
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // 把方案一键应用到大地图（区域划分页），通过 localStorage 传递方案 id
+  const applyToMap = (s) => {
+    localStorage.setItem('applied_scheme_id', s.id)
+    navigate('/cluster')
   }
 
   const openPreview = async (s) => {
@@ -397,6 +405,7 @@ function DeveloperPage() {
                       <button className="btn btn-secondary" onClick={() => loadToPlayground(s)}>加载调试</button>
                       <button className="btn btn-secondary" onClick={() => openPreview(s)}>预览</button>
                       <button className="btn btn-secondary" onClick={() => downloadScheme(s)}>下载</button>
+                      <button className="btn btn-outline" onClick={() => applyToMap(s)}>🗺 应用到大图</button>
                       <button className={inCompare ? 'btn btn-primary' : 'btn btn-outline'}
                         onClick={() => toggleCompare(s)} style={{ flex: '1 1 100%' }}>
                         {inCompare ? '✓ 已加入对比' : '＋ 加入对比'}
@@ -468,6 +477,7 @@ function DeveloperPage() {
               {!preview.loading && !preview.geojson && <div className="empty-state"><p>预览失败，请确认后端已启动</p></div>}
               <div className="actions" style={{ marginTop: '1rem' }}>
                 <button className="btn btn-primary" onClick={() => { loadToPlayground(preview.scheme); setPreview(null) }}>加载到调试器</button>
+                <button className="btn btn-outline" onClick={() => { applyToMap(preview.scheme); setPreview(null) }}>🗺 应用到大图</button>
                 <button className="btn btn-secondary" onClick={() => downloadScheme(preview.scheme)}>下载 JSON</button>
               </div>
             </div>
