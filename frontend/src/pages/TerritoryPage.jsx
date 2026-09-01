@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import MetricPanel from '../components/MetricPanel'
 import BenchmarkTable from '../components/BenchmarkTable'
 import RegionChipList from '../components/RegionChipList'
@@ -21,6 +22,8 @@ const THIN_THRESHOLD = 400
 const THIN_ZOOM = 12
 
 function TerritoryPage() {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const mapRef = useRef(null)
   const mapInstance = useRef(null)
   const regionLayerRef = useRef([])   // 片区多边形 + 标签
@@ -162,11 +165,30 @@ function TerritoryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 从参数市场「应用到大图」：挂载时若 localStorage 存有方案 id，则自动加载并渲染
+  // 从「分享链接 / 应用到大图」还原方案：URL 参数优先，localStorage 方案 id 回退
   const appliedRef = useRef(false)
   useEffect(() => {
     if (appliedRef.current) return
     appliedRef.current = true
+    const k = searchParams.get('k')
+    const lam = searchParams.get('lam')
+    if (k && lam) {
+      // 分享链接：直接拿 URL 里的参数还原，无需后端存储方案，故可跨用户分享
+      const mu = searchParams.get('mu')
+      const seed = searchParams.get('seed')
+      const type = searchParams.get('type')
+      const tf = type ? type.split(',').filter(Boolean) : []
+      const p = {
+        k: parseInt(k), lam: parseFloat(lam),
+        mu: mu != null ? parseFloat(mu) : 0.1,
+        seed: seed != null ? parseInt(seed) : 42,
+        typeFilter: tf
+      }
+      setParams(p)
+      setAppliedName(searchParams.get('name') || '分享方案')
+      handleDivide(p)
+      return
+    }
     const sid = localStorage.getItem('applied_scheme_id')
     if (!sid) return
     ;(async () => {
@@ -186,7 +208,11 @@ function TerritoryPage() {
 
   const handleDivide = async (override) => {
     const p = override || params
-    if (!override) setAppliedName(null)   // 手动重跑即退出「查看方案」状态
+    if (!override) {
+      setAppliedName(null)   // 手动重跑即退出「查看方案」状态
+      if (window.location.search) navigate('/cluster', { replace: true })  // 清理分享链接的 URL 参数
+      localStorage.removeItem('applied_scheme_id')
+    }
     setLoading(true)
     try {
       const res = await fetch('/api/territory/divide', {
@@ -255,6 +281,7 @@ function TerritoryPage() {
           </div>
           <button className="btn btn-secondary" onClick={() => {
             localStorage.removeItem('applied_scheme_id')
+            navigate('/cluster', { replace: true })
             setAppliedName(null)
             setParams({ k: 10, lam: 2.0, typeFilter: [] })
             handleDivide({ k: 10, lam: 2.0, mu: 0.1, seed: 42, typeFilter: [] })

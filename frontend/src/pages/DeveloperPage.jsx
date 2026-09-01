@@ -16,6 +16,15 @@ function regionColor(i, total) {
   return `hsl(${hue}, 65%, 55%)`
 }
 
+// 把方案参数编码进 URL，生成「可分享链接」——无需后端存储、无需登录即可在大图还原
+function buildShareUrl(s) {
+  const qs = new URLSearchParams({
+    k: s.params.k, lam: s.params.lam, mu: s.params.mu, seed: s.params.seed, name: s.name
+  })
+  if (s.params.type_filter?.length) qs.set('type', s.params.type_filter.join(','))
+  return `${window.location.origin}/cluster?${qs.toString()}`
+}
+
 // 片区边界小地图预览（复用 TerritoryPage 的 Voronoi 渲染思路，但独立组件、可多实例）
 function SchemePreviewMap({ geojson, height = '340px' }) {
   const mapRef = useRef(null)
@@ -116,6 +125,7 @@ function DeveloperPage() {
   const [preview, setPreview] = useState(null)     // 预览弹窗：{ scheme, geojson, loading }
   const [compareIds, setCompareIds] = useState([]) // 最多 3 个
   const [showCompare, setShowCompare] = useState(false)
+  const [copiedId, setCopiedId] = useState(null)    // 复制分享链接后的瞬时反馈
 
   const fetchSchemes = async () => {
     setMarketLoading(true)
@@ -184,10 +194,30 @@ function DeveloperPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  // 把方案一键应用到大地图（区域划分页），通过 localStorage 传递方案 id
+  // 把方案一键应用到大地图（区域划分页）：把参数编码进 URL 跳转，链接本身即可分享
   const applyToMap = (s) => {
-    localStorage.setItem('applied_scheme_id', s.id)
-    navigate('/cluster')
+    const qs = new URLSearchParams({
+      k: s.params.k, lam: s.params.lam, mu: s.params.mu, seed: s.params.seed, name: s.name
+    })
+    if (s.params.type_filter?.length) qs.set('type', s.params.type_filter.join(','))
+    navigate(`/cluster?${qs.toString()}`)
+  }
+
+  // 复制可分享链接到剪贴板（带降级方案）
+  const copyShareLink = async (s) => {
+    const url = buildShareUrl(s)
+    try {
+      await navigator.clipboard.writeText(url)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = url
+      document.body.appendChild(ta)
+      ta.select()
+      try { document.execCommand('copy') } catch { /* noop */ }
+      ta.remove()
+    }
+    setCopiedId(s.id)
+    setTimeout(() => setCopiedId(prev => (prev === s.id ? null : prev)), 1500)
   }
 
   const openPreview = async (s) => {
@@ -406,6 +436,7 @@ function DeveloperPage() {
                       <button className="btn btn-secondary" onClick={() => openPreview(s)}>预览</button>
                       <button className="btn btn-secondary" onClick={() => downloadScheme(s)}>下载</button>
                       <button className="btn btn-outline" onClick={() => applyToMap(s)}>🗺 应用到大图</button>
+                      <button className="btn btn-outline" onClick={() => copyShareLink(s)}>{copiedId === s.id ? '✓ 已复制' : '🔗 复制链接'}</button>
                       <button className={inCompare ? 'btn btn-primary' : 'btn btn-outline'}
                         onClick={() => toggleCompare(s)} style={{ flex: '1 1 100%' }}>
                         {inCompare ? '✓ 已加入对比' : '＋ 加入对比'}
@@ -478,6 +509,7 @@ function DeveloperPage() {
               <div className="actions" style={{ marginTop: '1rem' }}>
                 <button className="btn btn-primary" onClick={() => { loadToPlayground(preview.scheme); setPreview(null) }}>加载到调试器</button>
                 <button className="btn btn-outline" onClick={() => { applyToMap(preview.scheme); setPreview(null) }}>🗺 应用到大图</button>
+                <button className="btn btn-outline" onClick={() => copyShareLink(preview.scheme)}>🔗 复制链接</button>
                 <button className="btn btn-secondary" onClick={() => downloadScheme(preview.scheme)}>下载 JSON</button>
               </div>
             </div>
