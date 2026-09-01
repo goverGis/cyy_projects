@@ -1,0 +1,43 @@
+# 依赖
+node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 构建产物
+dist/
+build/
+.vite/
+
+# 环境变量（含高德 key，不入库；见 .env.example）
+.env
+.env.local
+.env.*.local
+
+# 数据库（sql.js 遗留文件 + 本地数据）
+*.db
+*.db-journal
+*.sqlite
+
+# 日志
+logs/
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 测试与覆盖率
+coverage/
+playwright-report/
+test-results/
+.pytest_cache/
+
+# 生成的演示数据（可由造数器重新生成，种子固定）
+data/seed/*.json
+data/seed/*.csv
