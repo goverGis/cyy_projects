@@ -30,7 +30,7 @@ function App() {
             区域讨论
           </NavLink>
           <NavLink to="/developer" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-            开发者平台
+            参数市场
           </NavLink>
           <NavLink to="/cluster" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
             区域划分

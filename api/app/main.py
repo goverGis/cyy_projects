@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routers import territory, legacy_items
+from app.routers import territory, legacy_items, schemes
 
 app = FastAPI(
     title="区域智能划分系统 API",
@@ -28,6 +28,7 @@ app.add_middleware(
 # 接入 PostGIS 并 seed 后改为挂载它们即可。
 app.include_router(legacy_items.router, prefix="/api")
 app.include_router(territory.router, prefix="")
+app.include_router(schemes.router, prefix="")
 
 # 生产模式（接入 PostGIS 后启用）：
 # app.include_router(events.router, prefix="/api")
