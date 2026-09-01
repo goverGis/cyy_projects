@@ -1,0 +1,13 @@
+{
+  "name": "territory-data-generator",
+  "version": "1.0.0",
+  "description": "北京地理事件造数器：按真实热点高斯分布生成带业务量权重的演示数据（GeoJSON / CSV / JSON）",
+  "type": "module",
+  "bin": {
+    "gen-events": "./generate.mjs"
+  },
+  "scripts": {
+    "generate": "node generate.mjs"
+  },
+  "license": "MIT"
+}

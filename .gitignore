@@ -39,5 +39,5 @@ test-results/
 .pytest_cache/
 
 # 生成的演示数据（可由造数器重新生成，种子固定）
-data/seed/*.json
-data/seed/*.csv
+data/
+tools/data/
