@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>区域智能划分系统 · 作品集</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,Roboto,sans-serif;
+         color:#1e293b; background:#f8fafc; line-height:1.6; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 40px 24px 64px; }
+  header h1 { font-size: 28px; margin: 0 0 6px; }
+  .sub { color:#64748b; font-size:15px; margin-bottom: 18px; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom: 28px; }
+  .chip { background:#e0edff; color:#1d4ed8; border-radius:999px; padding:4px 12px; font-size:12.5px; font-weight:600; }
+  section { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:22px 24px; margin-bottom:22px; }
+  h2 { font-size:18px; margin:0 0 14px; }
+  .arch { width:100%; height:auto; }
+  .metrics { display:flex; flex-wrap:wrap; gap:12px; margin: 6px 0 16px; }
+  .metric { flex:1 1 130px; background:#f1f5f9; border-radius:10px; padding:12px 14px; }
+  .metric .v { font-size:22px; font-weight:800; color:#0f172a; }
+  .metric .k { font-size:12px; color:#64748b; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { text-align:left; padding:7px 10px; border-bottom:1px solid #eef2f7; }
+  th { color:#64748b; font-weight:600; }
+  .hl li { margin-bottom:8px; }
+  code { background:#f1f5f9; padding:2px 6px; border-radius:6px; font-size:12.5px; }
+  .src { font-size:12px; color:#16a34a; font-weight:600; }
+  footer { text-align:center; color:#94a3b8; font-size:12px; margin-top:10px; }
+</style></head>
+<body><div class="wrap">
+
+<header>
+  <h1>🧭 区域智能划分系统</h1>
+  <div class="sub">基于 WebGIS 的地理区域智能划分 · 销售/服务片区自动生成 · 简历作品集</div>
+  <div class="chips">
+    <span class="chip">React 18 + Vite</span><span class="chip">高德 JSAPI 2.0</span>
+    <span class="chip">FastAPI</span><span class="chip">PostgreSQL + PostGIS 3.2</span>
+    <span class="chip">numpy + shapely</span><span class="chip">容量约束聚类</span>
+    <span class="chip">ST_VoronoiPolygons</span><span class="chip">行政区裁剪</span>
+  </div>
+</header>
+
+<section>
+  <h2>① 系统架构</h2>
+  <svg class="arch" viewBox="0 0 880 300" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+    <defs><marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#94a3b8"/></marker></defs>
+    <g font-size="13" text-anchor="middle">
+      <rect x="330" y="14" width="220" height="46" rx="10" fill="#dbeafe" stroke="#3b82f6"/>
+      <text x="440" y="34" font-weight="700">前端 React+Vite</text>
+      <text x="440" y="51" font-size="11" fill="#475569">高德 JSAPI · 3D · 参数市场</text>
+
+      <rect x="330" y="92" width="220" height="46" rx="10" fill="#dcfce7" stroke="#22c55e"/>
+      <text x="440" y="112" font-weight="700">后端 FastAPI</text>
+      <text x="440" y="129" font-size="11" fill="#475569">SQLAlchemy · Pydantic v2</text>
+
+      <rect x="330" y="170" width="220" height="46" rx="10" fill="#fef9c3" stroke="#eab308"/>
+      <text x="440" y="190" font-weight="700">算法层 numpy+shapely</text>
+      <text x="440" y="207" font-size="11" fill="#475569">容量约束 Lloyd + move/swap</text>
+
+      <rect x="330" y="248" width="220" height="42" rx="10" fill="#fae8ff" stroke="#d946ef"/>
+      <text x="440" y="273" font-weight="700">PostGIS 13/3.2</text>
+
+      <line x1="440" y1="60" x2="440" y2="92" stroke="#94a3b8" marker-end="url(#ar)"/>
+      <line x1="440" y1="138" x2="440" y2="170" stroke="#94a3b8" marker-end="url(#ar)"/>
+      <line x1="440" y1="216" x2="440" y2="248" stroke="#94a3b8" marker-end="url(#ar)"/>
+      <text x="700" y="150" font-size="11" fill="#64748b">event ·</text>
+      <text x="700" y="166" font-size="11" fill="#64748b">beijing_districts</text>
+      <text x="700" y="182" font-size="11" fill="#64748b">plan · territory</text>
+      <text x="160" y="150" font-size="11" fill="#64748b">分享链接</text>
+      <text x="160" y="166" font-size="11" fill="#64748b">一键应用大图</text>
+    </g>
+  </svg>
+</section>
+
+<section>
+  <h2>② 真实划分结果可视化</h2>
+  <div class="src">数据来源：database+pg_voronoi+bj · 数据库 4000 条事件 · 生产级边界 + 北京行政区裁剪</div>
+  <div class="metrics">
+    <div class="metric"><div class="v">6</div><div class="k">片区数 K</div></div>
+    <div class="metric"><div class="v">0.371</div><div class="k">业务量 CV（越均衡越好）</div></div>
+    <div class="metric"><div class="v">3765m</div><div class="k">平均服务半径</div></div>
+    <div class="metric"><div class="v">0</div><div class="k">容量越界次数</div></div>
+    <div class="metric"><div class="v">0.71</div><div class="k">平均紧凑度</div></div>
+  </div>
+  <svg viewBox="0 0 760 620" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;background:#fbfdff;border-radius:10px">
+    <polygon points="40.7,33.2 374.8,33.2 369.5,86.2 340.7,216.8 260.4,294.2 184.0,309.9 40.7,311.2 40.7,33.2" fill="#eef2f7" stroke="#c3ccd9" stroke-width="1"/>
+<polygon points="260.4,294.2 340.7,216.8 360.2,288.0 358.0,297.4 350.6,303.8 307.2,314.0 260.4,294.2" fill="#eef2f7" stroke="#c3ccd9" stroke-width="1"/>
+<polygon points="297.5,586.8 303.3,376.7 345.4,360.8 349.4,361.3 376.0,371.2 505.6,586.8 297.5,586.8" fill="#eef2f7" stroke="#c3ccd9" stroke-width="1"/>
+<polygon points="40.7,586.8 40.7,311.2 184.0,309.9 295.8,365.6 301.6,372.9 303.3,376.7 297.5,586.8 40.7,586.8" fill="#eef2f7" stroke="#c3ccd9" stroke-width="1"/>
+<polygon points="301.6,372.9 295.8,365.6 308.1,321.0 325.4,343.6 301.6,372.9" fill="#eef2f7" stroke="#c3ccd9" stroke-width="1"/>
+<polygon points="184.0,309.9 260.4,294.2 307.2,314.0 308.1,321.0 295.8,365.6 184.0,309.9" fill="#eef2f7" stroke="#c3ccd9" stroke-width="1"/>
+<polygon points="303.3,376.7 301.6,372.9 325.4,343.6 332.6,344.3 345.4,360.8 303.3,376.7" fill="#eef2f7" stroke="#c3ccd9" stroke-width="1"/>
+<polygon points="340.7,216.8 369.5,86.2 424.3,283.2 360.2,288.0 340.7,216.8" fill="#eef2f7" stroke="#c3ccd9" stroke-width="1"/>
+<polygon points="308.1,321.0 307.2,314.0 350.6,303.8 349.7,317.4 347.8,322.6 332.6,344.3 325.4,343.6 308.1,321.0" fill="#eef2f7" stroke="#c3ccd9" stroke-width="1"/>
+<polygon points="349.7,317.4 350.6,303.8 358.0,297.4 389.5,324.4 376.1,370.8 349.7,317.4" fill="#eef2f7" stroke="#c3ccd9" stroke-width="1"/>
+<polygon points="345.4,360.8 332.6,344.3 347.8,322.6 349.4,361.3 345.4,360.8" fill="#eef2f7" stroke="#c3ccd9" stroke-width="1"/>
+<polygon points="376.0,371.2 349.4,361.3 347.8,322.6 349.7,317.4 376.1,370.8 376.0,371.2" fill="#eef2f7" stroke="#c3ccd9" stroke-width="1"/>
+<polygon points="505.6,586.8 376.0,371.2 376.1,370.8 389.5,324.4 447.7,323.2 597.8,586.8 505.6,586.8" fill="#eef2f7" stroke="#c3ccd9" stroke-width="1"/>
+<polygon points="699.4,33.2 446.9,299.1 424.3,283.2 369.5,86.2 374.8,33.2 699.4,33.2" fill="#eef2f7" stroke="#c3ccd9" stroke-width="1"/>
+<polygon points="358.0,297.4 360.2,288.0 424.3,283.2 446.9,299.1 447.7,323.2 389.5,324.4 358.0,297.4" fill="#eef2f7" stroke="#c3ccd9" stroke-width="1"/>
+<polygon points="719.3,33.2 719.3,586.8 597.8,586.8 447.7,323.2 446.9,299.1 699.4,33.2 719.3,33.2" fill="#eef2f7" stroke="#c3ccd9" stroke-width="1"/>
+<polygon points="378.7,340.2 352.1,344.0 347.9,337.7 351.0,318.4 385.3,258.0 406.9,258.0 378.7,340.2" fill="#ef4444" fill-opacity="0.32" stroke="#ef4444" stroke-width="2.5"/>
+<circle cx="362.6" cy="333.3" r="13" fill="#ef4444" stroke="#fff" stroke-width="2"/>
+<text x="362.6" y="337.3" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">0</text>
+<text x="362.6" y="315.3" text-anchor="middle" font-size="11" fill="#334155">w=2582</text>
+<polygon points="352.1,344.0 378.7,340.2 401.0,411.3 342.9,411.3 352.1,344.0" fill="#3b82f6" fill-opacity="0.32" stroke="#3b82f6" stroke-width="2.5"/>
+<circle cx="365.6" cy="351.3" r="13" fill="#3b82f6" stroke="#fff" stroke-width="2"/>
+<text x="365.6" y="355.3" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">1</text>
+<text x="365.6" y="333.3" text-anchor="middle" font-size="11" fill="#334155">w=1968</text>
+<polygon points="461.2,411.3 401.0,411.3 378.7,340.2 406.9,258.0 461.2,258.0 461.2,411.3" fill="#10b981" fill-opacity="0.32" stroke="#10b981" stroke-width="2.5"/>
+<circle cx="396.2" cy="343.1" r="13" fill="#10b981" stroke="#fff" stroke-width="2"/>
+<text x="396.2" y="347.1" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">2</text>
+<text x="396.2" y="325.1" text-anchor="middle" font-size="11" fill="#334155">w=768</text>
+<polygon points="385.3,258.0 351.0,318.4 266.3,343.8 266.3,258.0 385.3,258.0" fill="#f59e0b" fill-opacity="0.32" stroke="#f59e0b" stroke-width="2.5"/>
+<circle cx="331.2" cy="318.1" r="13" fill="#f59e0b" stroke="#fff" stroke-width="2"/>
+<text x="331.2" y="322.1" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">3</text>
+<text x="331.2" y="300.1" text-anchor="middle" font-size="11" fill="#334155">w=1158</text>
+<polygon points="351.0,318.4 347.9,337.7 266.3,344.7 266.3,343.8 351.0,318.4" fill="#8b5cf6" fill-opacity="0.32" stroke="#8b5cf6" stroke-width="2.5"/>
+<circle cx="335.2" cy="329.4" r="13" fill="#8b5cf6" stroke="#fff" stroke-width="2"/>
+<text x="335.2" y="333.4" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">4</text>
+<text x="335.2" y="311.4" text-anchor="middle" font-size="11" fill="#334155">w=2414</text>
+<polygon points="266.3,344.7 347.9,337.7 352.1,344.0 342.9,411.3 266.3,411.3 266.3,344.7" fill="#ec4899" fill-opacity="0.32" stroke="#ec4899" stroke-width="2.5"/>
+<circle cx="337.1" cy="347.9" r="13" fill="#ec4899" stroke="#fff" stroke-width="2"/>
+<text x="337.1" y="351.9" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">5</text>
+<text x="337.1" y="329.9" text-anchor="middle" font-size="11" fill="#334155">w=1587</text>
+  </svg>
+  <table style="margin-top:14px">
+    <thead><tr><th>片区</th><th>业务量权重</th><th>事件数</th><th>质心 (GCJ-02)</th></tr></thead>
+    <tbody><tr><td>#0</td><td>2582</td><td>941</td><td>116.462, 39.966</td></tr><tr><td>#1</td><td>1968</td><td>721</td><td>116.477, 39.869</td></tr><tr><td>#2</td><td>768</td><td>300</td><td>116.629, 39.913</td></tr><tr><td>#3</td><td>1158</td><td>478</td><td>116.306, 40.048</td></tr><tr><td>#4</td><td>2414</td><td>937</td><td>116.325, 39.987</td></tr><tr><td>#5</td><td>1587</td><td>623</td><td>116.335, 39.887</td></tr></tbody>
+  </table>
+</section>
+
+<section>
+  <h2>③ 简历亮点</h2>
+  <ul class="hl">
+    <li><b>完整闭环</b>：数据生成 → 空间算法 → PostGIS 持久化 → 高德可视化 → 参数市场（调参/保存/对比/分享链接）→ 测试与文档。</li>
+    <li><b>生产级几何</b>：片区边界由 PostGIS <code>ST_VoronoiPolygons</code> 生成，并 <code>ST_Intersection</code> 裁剪到真实北京行政区，而非简单外接框。</li>
+    <li><b>容量约束聚类</b>：k-means++ 初始化 + 容量约束 Lloyd 迭代 + move/swap 局部搜索，目标函数兼顾服务半径、业务量均衡与形状紧凑度。</li>
+    <li><b>工程化</b>：FastAPI + SQLAlchemy 2 + Pydantic v2；<code>pytest</code> 14 用例（含真实 PostGIS 集成测试）；无库时自动回退文件模式。</li>
+    <li><b>可分享方案</b>：参数（K/λ/μ/seed/类型）编码进 URL，跨用户无需登录即可还原方案并一键应用到大图。</li>
+  </ul>
+</section>
+
+<section>
+  <h2>④ 本地运行</h2>
+  <p style="font-size:13.5px;color:#475569;margin-top:0">
+    后端 <code>cd api &amp;&amp; .venv/Scripts/python -m uvicorn app.main:app --port 8000</code> ·
+    前端 <code>cd frontend &amp;&amp; npm run dev</code>（http://localhost:3000）。<br>
+    灌库：<code>python -m scripts.seed</code> → <code>python -m scripts.load_beijing_districts</code>。<br>
+    换真实行政区边界：把 DataV <code>110000_full.json</code> 存为 <code>data/beijing_districts.json</code> 后重跑上面第二条命令即可。
+  </p>
+</section>
+
+<footer>本页为离线自包含作品集页面 · 数据来自本机运行实例的真实划分结果</footer>
+</div></body></html>

@@ -175,3 +175,22 @@ trae/
 | 切换 | 默认 `source=auto` 自动按可用性选择 | 设好 `DATABASE_URL` 即生效 |
 
 `source=auto` 下，优先读数据库；连不上自动回退本地文件，**演示永不中断**。
+
+---
+
+## 作品集页面（离线自包含）
+
+`showcase.html` 是一个**无需网络、双击即开**的简历作品集页面，内嵌：
+
+- 系统架构图（SVG）
+- 真实划分结果可视化：**北京行政区底图 + K 个服务片区 + 质心与指标**（数据来自 `POST /api/territory/divide` 带 `clip_to_district=true` 的真实结果）
+- 简历亮点与本地运行说明
+
+> 本机沙箱无外网时，地图瓦片/分享链接截图不可用，此页面用纯 SVG 渲染真实划分数据，便于离线展示与截图。
+
+重新生成（需后端在跑）：
+
+```bash
+cd api
+python ../tools/build_showcase.py
+```
