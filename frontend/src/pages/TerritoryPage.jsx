@@ -1,4 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
+import MetricPanel from '../components/MetricPanel'
+import BenchmarkTable from '../components/BenchmarkTable'
+import RegionChipList from '../components/RegionChipList'
 
 const TYPE_COLORS = {
   secondhand: '#667eea',
@@ -7,133 +10,155 @@ const TYPE_COLORS = {
   discussion: '#2ed573'
 }
 
-// 片区配色：按 HSL 均匀取色，保证相邻片区易于区分
 function regionColor(i, total) {
   const hue = Math.round((i * 360) / Math.max(total, 1))
   return `hsl(${hue}, 65%, 55%)`
 }
 
+// 抽稀阈值：视窗内点数超过该值 → 用聚合桶渲染（点抽稀），否则用明细点
+const THIN_THRESHOLD = 400
+// 低于该 zoom 强制抽稀（城市级俯视，单点无意义）
+const THIN_ZOOM = 12
+
 function TerritoryPage() {
   const mapRef = useRef(null)
   const mapInstance = useRef(null)
-  const overlaysRef = useRef([])
+  const regionLayerRef = useRef([])   // 片区多边形 + 标签
+  const pointLayerRef = useRef([])    // 抽稀桶 / 明细点（与片区层分离，独立刷新）
+  const resultRef = useRef(null)      // 最新划分结果（避免 zoomend 闭包拿到旧值）
+  const refreshRef = useRef(null)     // 最新 refreshPointLayer
+
   const [params, setParams] = useState({ k: 10, lam: 2.0, typeFilter: [] })
   const [result, setResult] = useState(null)
   const [metrics, setMetrics] = useState(null)
   const [bench, setBench] = useState(null)
   const [loading, setLoading] = useState(false)
   const [mapReady, setMapReady] = useState(false)
+  const [thinMode, setThinMode] = useState(false)
+  const [detailTotal, setDetailTotal] = useState(0)
 
-  useEffect(() => {
-    if (!window.AMap || mapInstance.current) return
-    const map = new window.AMap.Map(mapRef.current, {
-      zoom: 11,
-      center: [116.4074, 39.9042],
-      viewMode: '2D',
-      mapStyle: 'amap://styles/normal'
-    })
-    mapInstance.current = map
-    setMapReady(true)
-    return () => {
-      overlaysRef.current.forEach(o => o.setMap && o.setMap(null))
-      overlaysRef.current = []
-      if (mapInstance.current) {
-        mapInstance.current.destroy()
-        mapInstance.current = null
-      }
-    }
-  }, [])
-
-  const clearOverlays = () => {
-    overlaysRef.current.forEach(o => o.setMap && o.setMap(null))
-    overlaysRef.current = []
-  }
-
-  const renderResult = (data) => {
+  // 渲染片区 Voronoi 多边形（与抽稀无关，始终全量）
+  const renderRegions = (data) => {
     const map = mapInstance.current
     if (!map) return
-    clearOverlays()
-
-    // 1) 片区 Voronoi 多边形
     data.geojson.features.forEach(f => {
       const ring = f.geometry.coordinates[0]
       const path = ring.map(([lng, lat]) => [lng, lat])
       const color = regionColor(f.properties.region_id, data.k)
       const poly = new window.AMap.Polygon({
-        path,
-        strokeColor: color,
-        strokeWeight: 2,
-        strokeOpacity: 0.9,
-        fillColor: color,
-        fillOpacity: 0.18
+        path, strokeColor: color, strokeWeight: 2, strokeOpacity: 0.9,
+        fillColor: color, fillOpacity: 0.18
       })
       poly.setMap(map)
-      overlaysRef.current.push(poly)
-
-      // 片区标签：编号 + 业务量权重
+      regionLayerRef.current.push(poly)
       const [lng, lat] = f.properties.centroid
       const text = new window.AMap.Text({
         text: `片区${f.properties.region_id + 1}\n权重 ${f.properties.weight}`,
-        position: [lng, lat],
-        anchor: 'center',
+        position: [lng, lat], anchor: 'center',
         style: {
-          background: 'rgba(255,255,255,0.85)',
-          border: `1px solid ${color}`,
-          'border-radius': '4px',
-          padding: '2px 6px',
-          'font-size': '12px',
-          color: '#333',
-          'white-space': 'pre'
+          background: 'rgba(255,255,255,0.85)', border: `1px solid ${color}`,
+          'border-radius': '4px', padding: '2px 6px', 'font-size': '12px',
+          color: '#333', 'white-space': 'pre'
         }
       })
       text.setMap(map)
-      overlaysRef.current.push(text)
+      regionLayerRef.current.push(text)
     })
-
-    // 2) 源事件点（按类型着色的小圆点）
-    if (data.source_points && data.source_points.length) {
-      data.source_points.forEach(p => {
-        const cm = new window.AMap.CircleMarker({
-          center: [p.longitude, p.latitude],
-          radius: 3,
-          strokeColor: TYPE_COLORS[p.type] || '#888',
-          strokeOpacity: 0.8,
-          strokeWeight: 1,
-          fillColor: TYPE_COLORS[p.type] || '#888',
-          fillOpacity: 0.7,
-          bubble: true
-        })
-        cm.setMap(map)
-        overlaysRef.current.push(cm)
-      })
-    }
-
-    // 缩放到数据范围
     try {
-      map.setFitView(overlaysRef.current.filter(o => o instanceof window.AMap.Polygon))
+      map.setFitView(regionLayerRef.current.filter(o => o instanceof window.AMap.Polygon))
     } catch (_) {}
   }
+
+  const clearPointLayer = () => {
+    pointLayerRef.current.forEach(o => o.setMap && o.setMap(null))
+    pointLayerRef.current = []
+  }
+
+  // 点层：按 zoom / 视窗点数决定 抽稀桶 还是 明细点（海量数据优化）
+  const refreshPointLayer = async () => {
+    const map = mapInstance.current
+    if (!map || !resultRef.current) return
+    const zoom = map.getZoom()
+    const b = map.getBounds()
+    const sw = b.getSouthWest(), ne = b.getNorthEast()
+    const minlng = sw.getLng(), minlat = sw.getLat(), maxlng = ne.getLng(), maxlat = ne.getLat()
+
+    const cnt = await (await fetch(`/api/items/aggregate?minlng=${minlng}&minlat=${minlat}&maxlng=${maxlng}&maxlat=${maxlat}&grid=64`)).json()
+    const useThin = zoom < THIN_ZOOM || cnt.in_view > THIN_THRESHOLD
+    setThinMode(useThin)
+    clearPointLayer()
+
+    if (useThin) {
+      // 抽稀视图：聚合桶（DOM 标记数量级从数千降到几十）
+      cnt.buckets.forEach(bk => {
+        const r = 6 + Math.sqrt(bk.count) * 2.2
+        const cm = new window.AMap.CircleMarker({
+          center: [bk.cx, bk.cy], radius: r,
+          strokeColor: '#3742fa', strokeOpacity: 0.9, strokeWeight: 1,
+          fillColor: '#3742fa', fillOpacity: 0.45, bubble: true,
+          extData: { count: bk.count, weight: bk.weight }
+        })
+        cm.setMap(map)
+        cm.on('click', () => alert(`该区域聚合 ${bk.count} 个事件\n总权重 ${bk.weight}\n类型分布 ${JSON.stringify(bk.types)}`))
+        pointLayerRef.current.push(cm)
+      })
+      setDetailTotal(cnt.in_view)
+    } else {
+      // 明细视图：按视窗 bbox 分页拉取原始事件点
+      const PAGE = 500
+      const data = await (await fetch(`/api/items?minlng=${minlng}&minlat=${minlat}&maxlng=${maxlng}&maxlat=${maxlat}&offset=0&limit=${PAGE}`)).json()
+      setDetailTotal(data.total)
+      ;(data.items || []).forEach(p => {
+        const cm = new window.AMap.CircleMarker({
+          center: [p.longitude, p.latitude], radius: 3,
+          strokeColor: TYPE_COLORS[p.type] || '#888', strokeOpacity: 0.8, strokeWeight: 1,
+          fillColor: TYPE_COLORS[p.type] || '#888', fillOpacity: 0.7, bubble: true
+        })
+        cm.setMap(map)
+        pointLayerRef.current.push(cm)
+      })
+    }
+  }
+  refreshRef.current = refreshPointLayer
+
+  useEffect(() => {
+    if (!window.AMap || mapInstance.current) return
+    const map = new window.AMap.Map(mapRef.current, {
+      zoom: 11, center: [116.4074, 39.9042], viewMode: '2D', mapStyle: 'amap://styles/normal'
+    })
+    mapInstance.current = map
+    setMapReady(true)
+    map.on('zoomend', () => refreshRef.current && refreshRef.current())
+    return () => {
+      regionLayerRef.current.forEach(o => o.setMap && o.setMap(null))
+      pointLayerRef.current.forEach(o => o.setMap && o.setMap(null))
+      regionLayerRef.current = []
+      pointLayerRef.current = []
+      if (mapInstance.current) { mapInstance.current.destroy(); mapInstance.current = null }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleDivide = async () => {
     setLoading(true)
     try {
       const res = await fetch('/api/territory/divide', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          k: params.k,
-          lam: params.lam,
+          k: params.k, lam: params.lam,
           type_filter: params.typeFilter.length ? params.typeFilter : undefined
         })
       })
       const data = await res.json()
-      // 拉取源点用于叠加显示
-      const ptsRes = await fetch('/api/items?status=active')
-      const pts = await ptsRes.json()
-      data.source_points = pts
+      resultRef.current = data
       setResult(data)
       setMetrics(data.metrics)
-      renderResult(data)
+      // 清空旧图层：片区层 + 点层
+      regionLayerRef.current.forEach(o => o.setMap && o.setMap(null))
+      regionLayerRef.current = []
+      clearPointLayer()
+      renderRegions(data)
+      await refreshPointLayer()
     } catch (e) {
       console.error('划分失败', e)
       alert('划分失败，请确认后端（FastAPI :8000）已启动')
@@ -147,9 +172,7 @@ function TerritoryPage() {
       const res = await fetch(`/api/territory/benchmark?k=${params.k}`)
       const data = await res.json()
       setBench(data.rows)
-    } catch (e) {
-      console.error(e)
-    }
+    } catch (e) { console.error(e) }
   }
 
   const toggleType = (t) => {
@@ -206,66 +229,32 @@ function TerritoryPage() {
         </div>
       </div>
 
-      {metrics && (
-        <div className="stats-container">
-          <div className="stat-card"><div className="value">{metrics.n_regions}</div><div className="label">实际片区数</div></div>
-          <div className="stat-card"><div className="value">{metrics.cv_weight}</div><div className="label">业务量变异系数 CV↓</div></div>
-          <div className="stat-card"><div className="value">{Math.round(metrics.mean_radius_m)}m</div><div className="label">平均服务半径↓</div></div>
-          <div className="stat-card"><div className="value">{Math.round(metrics.max_radius_m)}m</div><div className="label">最大服务半径↓</div></div>
-          <div className="stat-card"><div className="value">{metrics.mean_compactness}</div><div className="label">平均紧凑度↑</div></div>
-          <div className="stat-card"><div className="value" style={{ color: metrics.capacity_violations === 0 ? '#2ed573' : '#ff4757' }}>{metrics.capacity_violations}</div><div className="label">超容片区（应为0）</div></div>
-        </div>
-      )}
+      {metrics && <MetricPanel metrics={metrics} />}
 
       {bench && (
         <div className="cluster-results" style={{ marginBottom: '1.5rem' }}>
           <h3>对比实验（K={params.k}）</h3>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.85rem' }}>
-            <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '2px solid #eee' }}>
-                <th style={{ padding: '.4rem' }}>方法</th>
-                <th style={{ padding: '.4rem' }}>CV↓</th>
-                <th style={{ padding: '.4rem' }}>平均半径↓</th>
-                <th style={{ padding: '.4rem' }}>最大半径↓</th>
-                <th style={{ padding: '.4rem' }}>紧凑度↑</th>
-                <th style={{ padding: '.4rem' }}>超容↓</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bench.map(r => (
-                <tr key={r.method} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                  <td style={{ padding: '.4rem', fontWeight: r.method === 'capacity-constrained' ? 700 : 400 }}>
-                    {r.method === 'capacity-constrained' ? '容量约束（本方法）' : r.method}
-                  </td>
-                  <td style={{ padding: '.4rem' }}>{r.cv_weight}</td>
-                  <td style={{ padding: '.4rem' }}>{Math.round(r.mean_radius_m)}</td>
-                  <td style={{ padding: '.4rem' }}>{Math.round(r.max_radius_m)}</td>
-                  <td style={{ padding: '.4rem' }}>{r.mean_compactness}</td>
-                  <td style={{ padding: '.4rem', color: r.capacity_violations === 0 ? '#2ed573' : '#ff4757' }}>{r.capacity_violations}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <BenchmarkTable rows={bench} k={params.k} />
         </div>
       )}
 
-      <div className="map-wrapper">
+      <div className="map-wrapper" style={{ position: 'relative' }}>
         <div className="map-container" ref={mapRef} style={{ height: '560px' }}></div>
         {!mapReady && <div className="map-loading"><div className="loading-spinner"></div><p>地图加载中…</p></div>}
+        {result && (
+          <div className="map-overlay-badge" style={{
+            position: 'absolute', top: 12, right: 12, background: 'rgba(255,255,255,.92)',
+            padding: '.4rem .7rem', borderRadius: 6, fontSize: '.8rem', boxShadow: '0 1px 4px rgba(0,0,0,.15)'
+          }}>
+            地图点层：{thinMode ? '🔵 抽稀聚合视图' : `🔴 明细视图（视窗 ${detailTotal} 点，分页渲染）`}
+          </div>
+        )}
       </div>
 
       {result && (
         <div className="cluster-results">
           <h3>片区清单（共 {result.regions.length} 个）</h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.5rem' }}>
-            {result.regions.map(r => (
-              <span key={r.region_id}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '.35rem', background: '#f5f6fa', padding: '.3rem .6rem', borderRadius: '6px', fontSize: '.8rem' }}>
-                <span style={{ width: 12, height: 12, borderRadius: 3, background: regionColor(r.region_id, result.k), display: 'inline-block' }} />
-                片区{r.region_id + 1} · {r.point_count}点 · 权重{r.weight}
-              </span>
-            ))}
-          </div>
+          <RegionChipList regions={result.regions} k={result.k} />
         </div>
       )}
     </div>

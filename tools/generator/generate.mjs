@@ -33,7 +33,7 @@ if (argv.includes("--help") || argv.includes("-h")) {
   process.exit(0);
 }
 
-const COUNT = parseInt(getArg("count", "800"), 10);
+const COUNT = parseInt(getArg("count", "4000"), 10);
 const SEED = parseInt(getArg("seed", "42"), 10);
 const OUT = path.resolve(__dirname, getArg("out", "../../data"));
 const CITY = getArg("city", "beijing");

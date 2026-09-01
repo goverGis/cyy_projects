@@ -62,7 +62,19 @@ def list_items(
     type: str | None = Query(default=None),
     category: str | None = Query(default=None),
     status: str | None = Query(default=None),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=500),
+    minlng: float | None = Query(default=None),
+    minlat: float | None = Query(default=None),
+    maxlng: float | None = Query(default=None),
+    maxlat: float | None = Query(default=None),
 ):
+    """列出事件（支持按类型/类目/状态过滤 + 分页 + 视窗 bbox 过滤）。
+
+    海量数据优化之「分页查询」：前端列表 / 地图明细视图按 offset/limit
+    分批拉取，避免一次性返回上万条造成前端卡顿与带宽浪费。
+    bbox 参数用于地图明细视图只取当前视窗内的点。
+    """
     items = [_normalize(e) for e in _all_items()]
     if type:
         items = [i for i in items if i["type"] == type]
@@ -70,7 +82,85 @@ def list_items(
         items = [i for i in items if i["category"] == category]
     if status:
         items = [i for i in items if i["status"] == status]
-    return items
+    if None not in (minlng, minlat, maxlng, maxlat):
+        items = [
+            i for i in items
+            if minlng <= i["longitude"] <= maxlng and minlat <= i["latitude"] <= maxlat
+        ]
+    total = len(items)
+    page = items[offset : offset + limit]
+    return {
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "count": len(page),
+        "items": page,
+    }
+
+
+@router.get("/items/aggregate")
+def aggregate_items(
+    minlng: float = Query(...),
+    minlat: float = Query(...),
+    maxlng: float = Query(...),
+    maxlat: float = Query(...),
+    grid: int = Query(default=48, ge=8, le=128),
+):
+    """点抽稀（WebGIS 海量数据优化之「数据点抽稀」）。
+
+    给定视窗 bbox，把落入其中的事件按 grid×grid 等经纬网格分桶，
+    每桶返回加权质心 + 数量 + 总权重 + 类型分布。前端在低 zoom / 海量点
+    时渲染这些聚合桶（而非逐个打点），把数千 DOM 标记压到几十个，
+    彻底消除卡顿；高 zoom 时再走 /api/items 明细分页。
+
+    返回结构：
+      buckets: [{ cx, cy, count, weight, types:{secondhand:n,...} }, ...]
+    """
+    import math
+
+    # 仅取落在 bbox 内的点（粗筛）
+    pts = [
+        e
+        for e in _all_items()
+        if minlng <= e.get("longitude", 0) <= maxlng
+        and minlat <= e.get("latitude", 0) <= maxlat
+    ]
+    if not pts:
+        return {"grid": grid, "in_view": 0, "buckets": []}
+
+    dlon = (maxlng - minlng) or 1e-6
+    dlat = (maxlat - minlat) or 1e-6
+
+    buckets: dict[tuple[int, int], dict] = {}
+    for e in pts:
+        gx = min(grid - 1, int((e["longitude"] - minlng) / dlon * grid))
+        gy = min(grid - 1, int((e["latitude"] - minlat) / dlat * grid))
+        key = (gx, gy)
+        b = buckets.get(key)
+        if b is None:
+            b = {"sx": 0.0, "sy": 0.0, "count": 0, "weight": 0.0,
+                 "types": {"secondhand": 0, "lostfound": 0, "emergency": 0, "discussion": 0}}
+            buckets[key] = b
+        b["sx"] += e["longitude"]
+        b["sy"] += e["latitude"]
+        b["count"] += 1
+        b["weight"] += float(e.get("weight", 1))
+        t = e.get("type", "secondhand")
+        if t in b["types"]:
+            b["types"][t] += 1
+
+    result = []
+    for (gx, gy), b in buckets.items():
+        n = b["count"]
+        result.append({
+            "cx": round(b["sx"] / n, 6),
+            "cy": round(b["sy"] / n, 6),
+            "count": n,
+            "weight": round(b["weight"], 2),
+            "types": b["types"],
+        })
+    result.sort(key=lambda x: -x["count"])
+    return {"grid": grid, "in_view": len(pts), "buckets": result}
 
 
 @router.get("/items/{item_id}")
