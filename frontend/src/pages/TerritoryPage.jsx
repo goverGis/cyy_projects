@@ -36,18 +36,27 @@ function TerritoryPage() {
   const [mapReady, setMapReady] = useState(false)
   const [thinMode, setThinMode] = useState(false)
   const [detailTotal, setDetailTotal] = useState(0)
+  const [view3D, setView3D] = useState(false)
+  const view3DRef = useRef(false)
 
   // 渲染片区 Voronoi 多边形（与抽稀无关，始终全量）
-  const renderRegions = (data) => {
+  // is3D=true 时按业务量权重拉伸成 3D 柱体（高度=权重，直观看出哪片过载）
+  const renderRegions = (data, is3D = false) => {
     const map = mapInstance.current
     if (!map) return
-    data.geojson.features.forEach(f => {
+    const feats = data.geojson.features
+    const maxW = Math.max(1, ...feats.map(f => f.properties.weight || 1))
+    feats.forEach(f => {
       const ring = f.geometry.coordinates[0]
       const path = ring.map(([lng, lat]) => [lng, lat])
       const color = regionColor(f.properties.region_id, data.k)
+      const w = f.properties.weight || 1
+      // 3D 柱体高度：归一化到 [120, 3200] 米，权重越高柱体越高
+      const height = is3D ? Math.max(120, Math.round((w / maxW) * 3200)) : 0
       const poly = new window.AMap.Polygon({
         path, strokeColor: color, strokeWeight: 2, strokeOpacity: 0.9,
-        fillColor: color, fillOpacity: 0.18
+        fillColor: color, fillOpacity: is3D ? 0.35 : 0.18,
+        height, extrusion: is3D ? { color, opacity: 0.7 } : undefined
       })
       poly.setMap(map)
       regionLayerRef.current.push(poly)
@@ -67,6 +76,18 @@ function TerritoryPage() {
     try {
       map.setFitView(regionLayerRef.current.filter(o => o instanceof window.AMap.Polygon))
     } catch (_) {}
+  }
+
+  // 3D 负载视图开关：仅切换地图 pitch + 重渲片区层高度（不重建地图）
+  const toggle3D = () => {
+    const nv = !view3D
+    setView3D(nv)
+    view3DRef.current = nv
+    const map = mapInstance.current
+    if (map) map.setPitch(nv ? 55 : 0)
+    regionLayerRef.current.forEach(o => o.setMap && o.setMap(null))
+    regionLayerRef.current = []
+    if (resultRef.current) renderRegions(resultRef.current, nv)
   }
 
   const clearPointLayer = () => {
@@ -124,7 +145,7 @@ function TerritoryPage() {
   useEffect(() => {
     if (!window.AMap || mapInstance.current) return
     const map = new window.AMap.Map(mapRef.current, {
-      zoom: 11, center: [116.4074, 39.9042], viewMode: '2D', mapStyle: 'amap://styles/normal'
+      zoom: 11, center: [116.4074, 39.9042], viewMode: '3D', pitch: 0, mapStyle: 'amap://styles/normal'
     })
     mapInstance.current = map
     setMapReady(true)
@@ -157,7 +178,7 @@ function TerritoryPage() {
       regionLayerRef.current.forEach(o => o.setMap && o.setMap(null))
       regionLayerRef.current = []
       clearPointLayer()
-      renderRegions(data)
+      renderRegions(data, view3DRef.current)
       await refreshPointLayer()
     } catch (e) {
       console.error('划分失败', e)
@@ -226,6 +247,9 @@ function TerritoryPage() {
           <button className="btn btn-outline" onClick={handleBenchmark}>
             📊 运行对比实验
           </button>
+          <button className="btn btn-outline" onClick={toggle3D}>
+            {view3D ? '⬇ 退出 3D 视图' : '🔲 3D 负载视图'}
+          </button>
         </div>
       </div>
 
@@ -247,6 +271,7 @@ function TerritoryPage() {
             padding: '.4rem .7rem', borderRadius: 6, fontSize: '.8rem', boxShadow: '0 1px 4px rgba(0,0,0,.15)'
           }}>
             地图点层：{thinMode ? '🔵 抽稀聚合视图' : `🔴 明细视图（视窗 ${detailTotal} 点，分页渲染）`}
+            {view3D && <div style={{ marginTop: '.3rem', color: '#3742fa' }}>🧊 3D 柱体高度 = 业务量权重（越高=负载越重）</div>}
           </div>
         )}
       </div>

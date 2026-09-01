@@ -221,3 +221,53 @@ def stats():
 def cluster_legacy():
     """旧 DBSCAN 聚类入口的兼容占位：已升级为容量约束划分，请使用 /api/territory/divide。"""
     return {"clusters": [], "noise": [], "note": "已升级为容量约束区域划分，调用 /api/territory/divide"}
+
+
+# ---------------------------------------------------------------------------
+# 开发者平台（插件市集）
+# 原项目 DeveloperPage 调用 /api/plugins，挂起 PostGIS 时该路由被摘掉导致 404。
+# 这里用内存态恢复，使「开发者平台」真正可增删（演示用，重启重置）。
+# 后续可演化为「算法参数市场」：保存/对比不同 (K, λ) 划分方案。
+# ---------------------------------------------------------------------------
+_PLUGINS = [
+    {
+        "id": "seed-1", "name": "坐标转换工具",
+        "description": "支持 WGS84、GCJ02、BD09 坐标系互转",
+        "category": "位置服务", "author": "开发者A", "downloads": 156, "rating": 4.8,
+        "code": "function coordTransform(lat, lon, from, to) {\n  // 坐标转换逻辑\n  return { lat, lon };\n}",
+    },
+    {
+        "id": "seed-2", "name": "热力图生成器",
+        "description": "基于位置数据生成热力图可视化",
+        "category": "可视化", "author": "开发者B", "downloads": 89, "rating": 4.5,
+        "code": "function generateHeatmap(points) {\n  // 热力图生成逻辑\n  return heatmapData;\n}",
+    },
+    {
+        "id": "seed-3", "name": "路径规划插件",
+        "description": "基于 OpenStreetMap 的路径规划功能",
+        "category": "地图工具", "author": "开发者C", "downloads": 234, "rating": 4.9,
+        "code": "function planRoute(start, end) {\n  // 路径规划逻辑\n  return route;\n}",
+    },
+]
+
+
+class PluginIn(BaseModel):
+    name: str
+    description: str
+    category: str | None = None
+    code: str
+    author: str | None = None
+    github: str | None = None
+
+
+@router.get("/plugins")
+def list_plugins():
+    return _PLUGINS
+
+
+@router.post("/plugins", status_code=201)
+def create_plugin(payload: PluginIn):
+    plugin = {**payload.model_dump(), "id": f"plg-{uuid4().hex[:8]}",
+              "downloads": 0, "rating": 0.0}
+    _PLUGINS.append(plugin)
+    return plugin
