@@ -34,7 +34,7 @@ function SchemePreviewMap({ geojson, height = '340px' }) {
   useEffect(() => {
     if (mapInstance.current || !window.AMap) return
     const map = new window.AMap.Map(mapRef.current, {
-      zoom: 11, center: [116.4074, 39.9042], viewMode: '2D', mapStyle: 'amap://styles/normal'
+      zoom: 11, center: [116.4074, 39.9042], viewMode: '2D', mapStyle: 'amap://styles/dark'
     })
     mapInstance.current = map
     return () => { if (mapInstance.current) { mapInstance.current.destroy(); mapInstance.current = null } }

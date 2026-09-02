@@ -1,28 +1,43 @@
 :root {
-  --primary: #6366f1;
-  --primary-dark: #4f46e5;
-  --primary-light: #818cf8;
-  --secondary: #64748b;
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --background: #f8fafc;
-  --background-secondary: #f1f5f9;
-  --surface: #ffffff;
-  --text: #1e293b;
-  --text-secondary: #64748b;
-  --text-muted: #94a3b8;
-  --border: #e2e8f0;
-  --border-light: #f1f5f9;
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  /* ===== GIS 控制台配色（深色测绘风） ===== */
+  --gis-bg: #06101d;
+  --gis-bg-2: #0a1828;
+  --gis-surface: rgba(13, 28, 47, 0.92);
+  --gis-surface-solid: #0d1c2f;
+  --gis-surface-2: #11233a;
+  --gis-surface-3: #15304d;
+  --gis-border: #1e3a5f;
+  --gis-border-soft: #16293f;
+  --gis-grid: rgba(56, 189, 248, 0.06);
+
+  --primary: #2dd4bf;          /* 测绘青 */
+  --primary-dark: #14b8a6;
+  --primary-light: #5eead4;
+  --secondary: #38bdf8;        /* 天蓝 */
+  --accent-3: #f59e0b;         /* 数据琥珀 */
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f43f5e;
+
+  --background: var(--gis-bg);
+  --background-secondary: var(--gis-bg-2);
+  --surface: var(--gis-surface-solid);
+  --text: #e6f1ff;
+  --text-secondary: #9bb4d0;
+  --text-muted: #5f7c9c;
+  --border: var(--gis-border);
+  --border-light: var(--gis-border-soft);
+
+  --mono: 'JetBrains Mono', 'SFMono-Regular', 'Roboto Mono', Consolas, 'Liberation Mono', monospace;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow: 0 6px 18px -6px rgb(0 0 0 / 0.55);
+  --shadow-md: 0 12px 28px -10px rgb(0 0 0 / 0.6);
+  --shadow-lg: 0 24px 48px -16px rgb(0 0 0 / 0.7);
   --radius: 12px;
   --radius-sm: 8px;
   --radius-lg: 16px;
-  --radius-xl: 24px;
+  --radius-xl: 20px;
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
   --transition-slow: 350ms ease;
@@ -36,11 +51,21 @@
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background: var(--background);
   color: var(--text);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--gis-bg);
+  /* 地形等高线光晕 + 经纬网格（测绘图幅质感） */
+  background-image:
+    radial-gradient(ellipse 55% 45% at 14% 18%, rgba(45, 212, 191, 0.10), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 86% 12%, rgba(56, 189, 248, 0.08), transparent 60%),
+    radial-gradient(ellipse 65% 55% at 78% 88%, rgba(45, 212, 191, 0.06), transparent 60%),
+    radial-gradient(ellipse 40% 50% at 28% 92%, rgba(245, 158, 11, 0.05), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(120, 170, 210, 0.045) 0 1px, transparent 1px 46px),
+    repeating-linear-gradient(90deg, rgba(120, 170, 210, 0.045) 0 1px, transparent 1px 46px);
+  background-attachment: fixed;
+  min-height: 100vh;
 }
 
 .app {
@@ -49,89 +74,160 @@ body {
   flex-direction: column;
 }
 
+/* ===================== 顶栏 / GIS 控制台 ===================== */
 .header {
-  background: linear-gradient(135deg, var(--primary) 0%, #8b5cf6 50%, #a78bfa 100%);
-  color: white;
-  padding: 1.25rem 2rem;
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+  background:
+    linear-gradient(180deg, rgba(8, 20, 36, 0.96) 0%, rgba(6, 16, 29, 0.98) 100%);
+  color: var(--text);
+  border-bottom: 1px solid var(--gis-border);
+  box-shadow: 0 6px 24px -8px rgba(0, 0, 0, 0.7), inset 0 -1px 0 rgba(45, 212, 191, 0.25);
   position: sticky;
   top: 0;
   z-index: 100;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
 }
 
-.header::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
-  pointer-events: none;
+.header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0.85rem 2rem 0.65rem;
+  flex-wrap: wrap;
 }
 
-.header h1 {
-  font-size: 1.6rem;
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.brand-mark {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: radial-gradient(circle at 30% 30%, rgba(45, 212, 191, 0.25), rgba(13, 28, 47, 0.6));
+  border: 1px solid rgba(45, 212, 191, 0.5);
+  box-shadow: 0 0 18px -4px rgba(45, 212, 191, 0.6), inset 0 0 12px rgba(45, 212, 191, 0.15);
+  flex-shrink: 0;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.brand-name {
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  background: linear-gradient(90deg, #5eead4, #38bdf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.brand-sub {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+/* 实时 HUD */
+.hud {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  flex-wrap: wrap;
+}
+
+.hud-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-secondary);
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--gis-border-soft);
+  border-radius: 999px;
+  background: rgba(13, 28, 47, 0.6);
+}
+
+.hud-item b {
+  color: var(--primary-light);
   font-weight: 700;
-  margin-bottom: 0.75rem;
-  letter-spacing: -0.025em;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.hud-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6);
+  animation: pulse-ring 2s infinite;
+}
+
+.hud-clock {
+  color: var(--text);
+  letter-spacing: 0.06em;
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55); }
+  70% { box-shadow: 0 0 0 7px rgba(52, 211, 153, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
 }
 
 .nav {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.35rem;
   flex-wrap: wrap;
+  padding: 0 2rem 0.6rem;
 }
 
 .nav-link {
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-secondary);
   text-decoration: none;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.9rem;
   border-radius: var(--radius-sm);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 500;
   transition: all var(--transition-normal);
-  position: relative;
-  overflow: hidden;
-}
-
-.nav-link::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  width: 0;
-  height: 2px;
-  background: white;
-  transition: all var(--transition-normal);
-  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid transparent;
 }
 
 .nav-link:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
-}
-
-.nav-link:hover::before {
-  width: 80%;
+  color: var(--text);
+  background: rgba(45, 212, 191, 0.08);
+  border-color: rgba(45, 212, 191, 0.2);
 }
 
 .nav-link.active {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  backdrop-filter: blur(10px);
+  color: var(--primary-light);
+  background: rgba(45, 212, 191, 0.12);
+  border-color: rgba(45, 212, 191, 0.45);
+  box-shadow: 0 0 16px -4px rgba(45, 212, 191, 0.5);
 }
 
-.nav-link.active::before {
-  width: 80%;
+.nav-link svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
 }
 
 .main {
   flex: 1;
   padding: 2rem;
-  max-width: 1400px;
+  max-width: 1440px;
   margin: 0 auto;
   width: 100%;
 }
@@ -141,81 +237,34 @@ body {
 }
 
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(30px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
 }
-
 @keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
-
 @keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
-
 @keyframes bounce {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
 }
+@keyframes spin { to { transform: rotate(360deg); } }
 
+/* ===================== 页面标题 ===================== */
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -226,10 +275,10 @@ body {
 }
 
 .page-header h2 {
-  font-size: 2rem;
+  font-size: 1.9rem;
   font-weight: 700;
   color: var(--text);
-  letter-spacing: -0.025em;
+  letter-spacing: -0.01em;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -237,14 +286,16 @@ body {
 
 .page-header h2::before {
   content: '';
-  width: 4px;
-  height: 28px;
-  background: linear-gradient(180deg, var(--primary) 0%, #8b5cf6 100%);
-  border-radius: 2px;
+  width: 5px;
+  height: 26px;
+  background: linear-gradient(180deg, var(--primary) 0%, var(--secondary) 100%);
+  border-radius: 3px;
+  box-shadow: 0 0 10px rgba(45, 212, 191, 0.6);
 }
 
+/* ===================== 按钮 ===================== */
 .btn {
-  padding: 0.75rem 1.5rem;
+  padding: 0.7rem 1.4rem;
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -256,80 +307,60 @@ body {
   gap: 0.5rem;
   position: relative;
   overflow: hidden;
+  font-family: inherit;
 }
 
-.btn::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  background: rgba(255,255,255,0.2);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  transition: width 0.6s, height 0.6s;
-}
-
-.btn:hover::before {
-  width: 300px;
-  height: 300px;
-}
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary) 0%, #8b5cf6 100%);
-  color: white;
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  color: #04141f;
+  box-shadow: 0 6px 18px -6px rgba(45, 212, 191, 0.6);
+  font-weight: 700;
 }
-
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
+  box-shadow: 0 10px 26px -6px rgba(45, 212, 191, 0.75);
 }
-
-.btn-primary:active {
-  transform: translateY(0);
-}
+.btn-primary:active { transform: translateY(0); }
 
 .btn-secondary {
-  background: var(--surface);
+  background: var(--gis-surface-2);
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 1px solid var(--gis-border);
   box-shadow: var(--shadow-sm);
 }
-
-.btn-secondary:hover {
-  background: var(--background);
-  border-color: var(--primary-light);
-  color: var(--primary);
-  transform: translateY(-1px);
+.btn-secondary:hover:not(:disabled) {
+  background: var(--gis-surface-3);
+  border-color: var(--primary);
+  color: var(--primary-light);
 }
 
 .btn-outline {
   background: transparent;
-  color: var(--primary);
-  border: 2px solid var(--primary);
+  color: var(--primary-light);
+  border: 1px solid rgba(45, 212, 191, 0.45);
   box-shadow: none;
 }
-
-.btn-outline:hover {
-  background: var(--primary);
-  color: white;
+.btn-outline:hover:not(:disabled) {
+  background: rgba(45, 212, 191, 0.12);
+  color: #fff;
+  border-color: var(--primary);
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 6px 18px -8px rgba(45, 212, 191, 0.6);
 }
 
 .btn-danger {
-  background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
-  color: white;
-  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+  background: linear-gradient(135deg, var(--danger) 0%, #be123c 100%);
+  color: #fff;
+  box-shadow: 0 6px 18px -6px rgba(244, 63, 94, 0.5);
 }
-
-.btn-danger:hover {
+.btn-danger:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+  box-shadow: 0 10px 26px -6px rgba(244, 63, 94, 0.65);
 }
 
+/* ===================== 卡片网格 ===================== */
 .items-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -337,41 +368,32 @@ body {
 }
 
 .item-card {
-  background: var(--surface);
+  background: var(--gis-surface);
   border-radius: var(--radius-lg);
   padding: 0;
   box-shadow: var(--shadow);
   transition: all var(--transition-slow);
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--gis-border-soft);
   overflow: hidden;
   position: relative;
+  backdrop-filter: blur(6px);
 }
-
 .item-card::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--primary), #8b5cf6, #a78bfa);
-  opacity: 0;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  opacity: 0.7;
   transition: opacity var(--transition-normal);
 }
-
 .item-card:hover {
-  transform: translateY(-8px);
-  box-shadow: var(--shadow-xl);
-  border-color: transparent;
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(45, 212, 191, 0.4);
 }
 
-.item-card:hover::before {
-  opacity: 1;
-}
-
-.item-card-content {
-  padding: 1.5rem;
-}
+.item-card-content { padding: 1.5rem; }
 
 .item-card-header {
   display: flex;
@@ -383,7 +405,7 @@ body {
 .item-card h3 {
   color: var(--text);
   margin-bottom: 0.5rem;
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 600;
   line-height: 1.4;
 }
@@ -392,23 +414,18 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-  color: var(--primary);
-  padding: 0.35rem 0.85rem;
+  background: rgba(45, 212, 191, 0.14);
+  color: var(--primary-light);
+  padding: 0.3rem 0.8rem;
   border-radius: 20px;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  margin-bottom: 0.75rem;
-  transition: all var(--transition-fast);
-}
-
-.item-card:hover .category {
-  transform: scale(1.05);
+  border: 1px solid rgba(45, 212, 191, 0.3);
 }
 
 .item-card .description {
   color: var(--text-secondary);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   margin-bottom: 1rem;
   line-height: 1.7;
   display: -webkit-box;
@@ -418,19 +435,16 @@ body {
 }
 
 .item-card .price {
-  color: var(--danger);
+  color: var(--accent-3);
   font-size: 1.5rem;
   font-weight: 800;
   margin-bottom: 0.75rem;
   display: flex;
   align-items: baseline;
   gap: 0.25rem;
+  font-family: var(--mono);
 }
-
-.item-card .price span {
-  font-size: 1rem;
-  font-weight: 500;
-}
+.item-card .price span { font-size: 1rem; font-weight: 500; color: var(--text-secondary); }
 
 .item-card .meta {
   display: flex;
@@ -438,7 +452,6 @@ body {
   gap: 0.4rem;
   margin-bottom: 1rem;
 }
-
 .item-card .location,
 .item-card .contact {
   color: var(--text-secondary);
@@ -447,48 +460,138 @@ body {
   align-items: center;
   gap: 0.4rem;
 }
-
-.item-card .location::before {
-  content: '📍';
-  font-size: 0.8rem;
-}
-
-.item-card .contact::before {
-  content: '📞';
-  font-size: 0.8rem;
-}
-
+.item-card .location::before { content: '📍'; font-size: 0.8rem; }
+.item-card .contact::before { content: '📞'; font-size: 0.8rem; }
 .item-card .timestamp {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
   margin-top: 0.5rem;
+  font-family: var(--mono);
 }
-
 .item-card .actions {
   display: flex;
   gap: 0.5rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--border-light);
+  border-top: 1px solid var(--gis-border-soft);
 }
+.item-card .actions .btn { flex: 1; padding: 0.6rem; font-size: 0.84rem; justify-content: center; }
+.item-card .actions .btn:not(:last-child) { margin-right: 0.25rem; }
 
-.item-card .actions .btn {
-  flex: 1;
-  padding: 0.6rem;
-  font-size: 0.85rem;
-  justify-content: center;
+/* ===================== 统计卡 ===================== */
+.stats-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
 }
-
-.item-card .actions .btn:not(:last-child) {
-  margin-right: 0.25rem;
+.stat-card {
+  background: var(--gis-surface);
+  border-radius: var(--radius-lg);
+  padding: 1.6rem;
+  text-align: center;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--gis-border-soft);
+  transition: all var(--transition-slow);
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(6px);
 }
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  opacity: 0.7;
+}
+.stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: rgba(45, 212, 191, 0.4); }
+.stat-card .value {
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: var(--primary-light);
+  line-height: 1.2;
+  margin-bottom: 0.4rem;
+  font-family: var(--mono);
+  text-shadow: 0 0 18px rgba(45, 212, 191, 0.35);
+}
+.stat-card .label { color: var(--text-secondary); font-size: 0.88rem; font-weight: 500; }
+.stat-card .icon { font-size: 1.8rem; margin-bottom: 0.4rem; }
+.hint { font-size: 0.74rem; color: var(--text-muted); margin-top: 0.35rem; font-family: var(--mono); }
 
+/* ===================== 控制面板 ===================== */
+.cluster-controls {
+  background: var(--gis-surface);
+  border-radius: var(--radius-lg);
+  padding: 1.6rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--gis-border);
+  backdrop-filter: blur(6px);
+  position: relative;
+}
+.cluster-controls::after {
+  content: '';
+  position: absolute;
+  top: 10px; right: 10px;
+  width: 8px; height: 8px;
+  border-top: 2px solid var(--primary);
+  border-right: 2px solid var(--primary);
+  opacity: 0.5;
+}
+.cluster-controls h3 {
+  margin-bottom: 1.2rem;
+  color: var(--text);
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.control-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+.control-row .form-group { margin-bottom: 0; }
+.control-row .btn { height: 46px; }
+
+.cluster-results {
+  background: var(--gis-surface);
+  border-radius: var(--radius-lg);
+  padding: 1.6rem;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--gis-border-soft);
+  backdrop-filter: blur(6px);
+}
+.cluster-results h3 { margin-bottom: 1rem; color: var(--text); font-size: 1.1rem; }
+
+.cluster-item {
+  background: rgba(52, 211, 153, 0.08);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 1rem;
+  border-left: 4px solid var(--success);
+  transition: all var(--transition-fast);
+}
+.cluster-item:hover { transform: translateX(4px); background: rgba(52, 211, 153, 0.13); }
+.cluster-item h4 { color: var(--success); margin-bottom: 0.4rem; font-size: 1rem; font-weight: 600; }
+.cluster-item .points-count { color: var(--text-secondary); font-size: 0.88rem; }
+
+.noise-item {
+  background: rgba(245, 158, 11, 0.08);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.25rem;
+  border-left: 4px solid var(--warning);
+  transition: all var(--transition-fast);
+}
+.noise-item:hover { transform: translateX(4px); }
+.noise-item h4 { color: var(--warning); margin-bottom: 0.4rem; }
+
+/* ===================== 表单 / 弹窗 ===================== */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(15, 23, 42, 0.7);
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(3, 9, 18, 0.78);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
@@ -497,315 +600,108 @@ body {
   padding: 1rem;
   animation: fadeIn 0.3s ease;
 }
-
 .modal {
-  background: var(--surface);
+  background: var(--gis-surface-solid);
   border-radius: var(--radius-xl);
   padding: 0;
   width: 100%;
   max-width: 520px;
   max-height: 90vh;
   overflow: hidden;
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--shadow-lg);
   animation: scaleIn 0.3s ease;
+  border: 1px solid var(--gis-border);
 }
-
-.modal-large {
-  max-width: 680px;
-}
-
+.modal-large { max-width: 680px; }
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem 2rem;
-  border-bottom: 1px solid var(--border-light);
-  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  padding: 1.4rem 1.8rem;
+  border-bottom: 1px solid var(--gis-border-soft);
+  background: linear-gradient(180deg, rgba(45, 212, 191, 0.06), transparent);
 }
-
 .modal-header h3 {
-  font-size: 1.35rem;
+  font-size: 1.3rem;
   font-weight: 700;
   color: var(--text);
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
-
 .modal-close {
-  background: var(--background);
-  border: none;
-  font-size: 1.25rem;
+  background: var(--gis-surface-2);
+  border: 1px solid var(--gis-border);
+  font-size: 1.1rem;
   color: var(--text-secondary);
   cursor: pointer;
-  padding: 0.5rem;
+  padding: 0.45rem;
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px;
 }
+.modal-close:hover { background: var(--danger); color: #fff; transform: rotate(90deg); border-color: var(--danger); }
+.modal-form { padding: 1.8rem; max-height: calc(90vh - 100px); overflow-y: auto; }
+.modal-form::-webkit-scrollbar { width: 6px; }
+.modal-form::-webkit-scrollbar-track { background: var(--gis-surface-2); border-radius: 3px; }
+.modal-form::-webkit-scrollbar-thumb { background: var(--gis-border); border-radius: 3px; }
+.modal-form::-webkit-scrollbar-thumb:hover { background: var(--secondary); }
 
-.modal-close:hover {
-  background: var(--danger);
-  color: white;
-  transform: rotate(90deg);
-}
-
-.modal-form {
-  padding: 2rem;
-  max-height: calc(90vh - 100px);
-  overflow-y: auto;
-}
-
-.modal-form::-webkit-scrollbar {
-  width: 6px;
-}
-
-.modal-form::-webkit-scrollbar-track {
-  background: var(--background);
-  border-radius: 3px;
-}
-
-.modal-form::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-
-.modal-form::-webkit-scrollbar-thumb:hover {
-  background: var(--secondary);
-}
-
-.form-group {
-  margin-bottom: 1.25rem;
-}
-
+.form-group { margin-bottom: 1.2rem; }
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
   color: var(--text);
   font-weight: 600;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+  font-size: 0.88rem;
 }
-
 .form-group input,
 .form-group textarea,
 .form-group select {
   width: 100%;
-  padding: 0.85rem 1rem;
-  border: 2px solid var(--border);
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--gis-border);
   border-radius: var(--radius-sm);
-  font-size: 0.95rem;
+  font-size: 0.94rem;
   transition: all var(--transition-fast);
-  background: var(--surface);
+  background: var(--gis-surface-2);
   color: var(--text);
+  font-family: inherit;
 }
-
+.form-group input::placeholder,
+.form-group textarea::placeholder { color: var(--text-muted); }
 .form-group input:hover,
 .form-group textarea:hover,
-.form-group select:hover {
-  border-color: var(--primary-light);
-}
-
+.form-group select:hover { border-color: var(--primary); }
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+  box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.15);
 }
+.form-group select option { background: var(--gis-surface-solid); color: var(--text); }
+.form-group textarea { resize: vertical; min-height: 110px; }
 
-.form-group textarea {
-  resize: vertical;
-  min-height: 120px;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-}
+.form-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
 
 .form-tip {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  color: #92400e;
-  padding: 1rem 1.25rem;
+  background: rgba(245, 158, 11, 0.08);
+  color: #fcd34d;
+  padding: 0.9rem 1.2rem;
   border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-  margin-bottom: 1.5rem;
+  font-size: 0.88rem;
+  margin-bottom: 1.4rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   border-left: 4px solid var(--warning);
 }
+.form-actions { display: flex; gap: 1rem; margin-top: 1.8rem; }
+.form-actions .btn { flex: 1; justify-content: center; padding: 0.8rem 1.4rem; font-size: 0.98rem; }
 
-.form-actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 2rem;
-}
-
-.form-actions .btn {
-  flex: 1;
-  justify-content: center;
-  padding: 0.85rem 1.5rem;
-  font-size: 1rem;
-}
-
-.stats-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1.25rem;
-  margin-bottom: 2rem;
-}
-
-.stat-card {
-  background: var(--surface);
-  border-radius: var(--radius-lg);
-  padding: 1.75rem;
-  text-align: center;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border-light);
-  transition: all var(--transition-slow);
-  position: relative;
-  overflow: hidden;
-}
-
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--primary), #8b5cf6);
-  opacity: 0;
-  transition: opacity var(--transition-normal);
-}
-
-.stat-card:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: var(--shadow-lg);
-}
-
-.stat-card:hover::before {
-  opacity: 1;
-}
-
-.stat-card .value {
-  font-size: 2.5rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, var(--primary) 0%, #8b5cf6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  line-height: 1.2;
-  margin-bottom: 0.5rem;
-}
-
-.stat-card .label {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.stat-card .icon {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-}
-
-.cluster-controls {
-  background: var(--surface);
-  border-radius: var(--radius-lg);
-  padding: 1.75rem;
-  margin-bottom: 1.5rem;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border-light);
-}
-
-.cluster-controls h3 {
-  margin-bottom: 1.25rem;
-  color: var(--text);
-  font-size: 1.15rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.control-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
-  align-items: end;
-}
-
-.control-row .form-group {
-  margin-bottom: 0;
-}
-
-.control-row .btn {
-  height: 48px;
-}
-
-.cluster-results {
-  background: var(--surface);
-  border-radius: var(--radius-lg);
-  padding: 1.75rem;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border-light);
-}
-
-.cluster-results h3 {
-  margin-bottom: 1rem;
-  color: var(--text);
-  font-size: 1.15rem;
-}
-
-.cluster-item {
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-  border-radius: var(--radius);
-  padding: 1.25rem;
-  margin-bottom: 1rem;
-  border-left: 5px solid var(--success);
-  transition: all var(--transition-fast);
-}
-
-.cluster-item:hover {
-  transform: translateX(4px);
-}
-
-.cluster-item h4 {
-  color: var(--success);
-  margin-bottom: 0.5rem;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.cluster-item .points-count {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-}
-
-.noise-item {
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-  border-radius: var(--radius);
-  padding: 1.25rem;
-  border-left: 5px solid var(--warning);
-  transition: all var(--transition-fast);
-}
-
-.noise-item:hover {
-  transform: translateX(4px);
-}
-
-.noise-item h4 {
-  color: #b45309;
-  margin-bottom: 0.5rem;
-}
-
+/* ===================== 加载 ===================== */
 .loading {
   display: flex;
   flex-direction: column;
@@ -815,259 +711,195 @@ body {
   color: var(--text-secondary);
   gap: 1rem;
 }
-
 .loading-spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid var(--border);
+  width: 46px;
+  height: 46px;
+  border: 4px solid var(--gis-border);
   border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.map-page {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.map-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 1.25rem;
-}
-
-.map-title h2 {
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 0.35rem;
-}
-
-.map-title h2::before {
-  display: none;
-}
-
-.map-subtitle {
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-  margin-left: 0;
-}
-
-.map-actions {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
+/* ===================== 地图 / GIS 装饰层 ===================== */
+.map-page { display: flex; flex-direction: column; gap: 1.5rem; }
+.map-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1.25rem; }
+.map-title h2 { font-size: 1.9rem; font-weight: 700; margin-bottom: 0.3rem; color: var(--text); }
+.map-title h2::before { display: none; }
+.map-subtitle { color: var(--text-secondary); font-size: 0.95rem; font-family: var(--mono); }
+.map-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
 
 .map-wrapper {
   position: relative;
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-lg);
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--gis-border);
+  background: #04101c;
 }
-
-.map-container {
-  height: calc(100vh - 300px);
-  min-height: 450px;
-}
+.map-container { height: calc(100vh - 300px); min-height: 450px; }
 
 .map-loading {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--surface);
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--gis-surface-solid);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   gap: 1rem;
+  z-index: 5;
 }
-
-.map-loading .loading-spinner {
-  width: 56px;
-  height: 56px;
-}
+.map-loading .loading-spinner { width: 54px; height: 54px; }
 
 .map-legend {
-  background: var(--surface);
+  background: var(--gis-surface);
   border-radius: var(--radius-lg);
-  padding: 1.25rem 1.75rem;
+  padding: 1.2rem 1.6rem;
   box-shadow: var(--shadow);
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--gis-border-soft);
+  backdrop-filter: blur(6px);
 }
-
 .legend-title {
   font-weight: 700;
   color: var(--text);
-  margin-bottom: 1rem;
-  font-size: 0.95rem;
+  margin-bottom: 0.9rem;
+  font-size: 0.9rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
+  font-family: var(--mono);
 }
-
-.legend-items {
-  display: flex;
-  gap: 2rem;
-  flex-wrap: wrap;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
+.legend-items { display: flex; gap: 2rem; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 0.6rem; }
 .legend-dot {
-  width: 14px;
-  height: 14px;
+  width: 14px; height: 14px;
   border-radius: 50%;
-  box-shadow: 0 0 0 3px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 0 0 3px rgba(13, 28, 47, 0.9), 0 0 8px rgba(45, 212, 191, 0.4);
   transition: transform var(--transition-fast);
 }
-
-.legend-item:hover .legend-dot {
-  transform: scale(1.3);
-}
-
-.legend-current {
-  background: #2196f3;
-  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.3), 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.legend-label {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  font-weight: 500;
-}
+.legend-item:hover .legend-dot { transform: scale(1.3); }
+.legend-current { background: #38bdf8; box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.3), 0 2px 4px rgba(0,0,0,0.2); }
+.legend-label { color: var(--text-secondary); font-size: 0.88rem; font-weight: 500; }
 
 .mini-map {
   width: 100%;
   border-radius: var(--radius);
   overflow: hidden;
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--gis-border-soft);
   box-shadow: var(--shadow);
 }
 
-.empty-state {
-  text-align: center;
-  padding: 4rem 2rem;
+.empty-state { text-align: center; padding: 4rem 2rem; color: var(--text-secondary); }
+.empty-state-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.6; filter: drop-shadow(0 0 12px rgba(45,212,191,0.3)); }
+.empty-state h3 { font-size: 1.25rem; margin-bottom: 0.5rem; color: var(--text); }
+.empty-state p { font-size: 0.95rem; }
+
+/* ---- GIS 定位框（四角刻度） ---- */
+.gis-frame { position: absolute; inset: 0; pointer-events: none; z-index: 6; border-radius: var(--radius-lg); }
+.gis-corner {
+  position: absolute;
+  width: 22px; height: 22px;
+  border-color: var(--primary);
+  opacity: 0.85;
+}
+.gis-corner.tl { top: 10px; left: 10px; border-top: 2px solid; border-left: 2px solid; }
+.gis-corner.tr { top: 10px; right: 10px; border-top: 2px solid; border-right: 2px solid; }
+.gis-corner.bl { bottom: 10px; left: 10px; border-bottom: 2px solid; border-left: 2px solid; }
+.gis-corner.br { bottom: 10px; right: 10px; border-bottom: 2px solid; border-right: 2px solid; }
+
+/* ---- 准星（地图中心十字） ---- */
+.reticle { position: absolute; inset: 0; pointer-events: none; z-index: 6; display: grid; place-items: center; }
+.reticle::before, .reticle::after {
+  content: ''; position: absolute; background: rgba(94, 234, 212, 0.5);
+}
+.reticle::before { width: 40px; height: 1px; }
+.reticle::after { width: 1px; height: 40px; }
+.reticle-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  border: 1.5px solid var(--primary-light);
+  box-shadow: 0 0 10px rgba(94, 234, 212, 0.6);
+  position: absolute;
+}
+
+/* ---- 坐标 HUD（左下） ---- */
+.hud-coord {
+  position: absolute;
+  left: 14px; bottom: 14px;
+  z-index: 7;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--primary-light);
+  background: rgba(6, 16, 29, 0.82);
+  border: 1px solid rgba(45, 212, 191, 0.4);
+  border-radius: 6px;
+  padding: 0.4rem 0.7rem;
+  letter-spacing: 0.03em;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+  line-height: 1.5;
+}
+.hud-coord .k { color: var(--text-muted); }
+.hud-coord .v { color: #e6f1ff; }
+
+/* ---- 指北针 + 比例尺（右下） ---- */
+.hud-compass {
+  position: absolute;
+  right: 14px; bottom: 14px;
+  z-index: 7;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.8rem;
+  pointer-events: none;
+}
+.compass {
+  width: 46px; height: 46px;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+}
+.scale-bar {
+  font-family: var(--mono);
+  font-size: 0.66rem;
   color: var(--text-secondary);
+  background: rgba(6, 16, 29, 0.82);
+  border: 1px solid var(--gis-border);
+  border-radius: 6px;
+  padding: 0.35rem 0.55rem;
+  backdrop-filter: blur(4px);
+}
+.scale-bar .bar {
+  height: 5px;
+  width: 90px;
+  margin-top: 3px;
+  background:
+    linear-gradient(90deg, #e6f1ff 0 50%, transparent 50% 100%) 0 0 / 15px 100% repeat-x;
+  border: 1px solid rgba(230, 241, 255, 0.5);
+  border-top: none;
 }
 
-.empty-state-icon {
-  font-size: 4rem;
-  margin-bottom: 1rem;
-  opacity: 0.5;
-}
-
-.empty-state h3 {
-  font-size: 1.25rem;
-  margin-bottom: 0.5rem;
-  color: var(--text);
-}
-
-.empty-state p {
-  font-size: 0.95rem;
-}
-
+/* ===================== 响应式 ===================== */
 @media (max-width: 768px) {
-  .header {
-    padding: 1rem 1.25rem;
-  }
-  
-  .header h1 {
-    font-size: 1.3rem;
-  }
-  
-  .nav {
-    gap: 0.25rem;
-  }
-  
-  .nav-link {
-    padding: 0.4rem 0.75rem;
-    font-size: 0.85rem;
-  }
-  
-  .main {
-    padding: 1.25rem;
-  }
-  
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .page-header h2 {
-    font-size: 1.5rem;
-  }
-  
-  .items-grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-  
-  .form-row {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-  
-  .map-header {
-    flex-direction: column;
-  }
-  
-  .map-actions {
-    width: 100%;
-  }
-  
-  .map-actions .btn {
-    flex: 1;
-  }
-  
-  .stats-container {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .modal-form {
-    padding: 1.25rem;
-  }
-  
-  .modal-header {
-    padding: 1.25rem;
-  }
+  .header-bar { padding: 0.75rem 1.25rem 0.5rem; }
+  .brand-name { font-size: 1.1rem; }
+  .hud { width: 100%; gap: 0.5rem; }
+  .nav { gap: 0.25rem; padding: 0 1.25rem 0.5rem; }
+  .nav-link { padding: 0.4rem 0.7rem; font-size: 0.82rem; }
+  .nav-link span.nav-label { display: none; }
+  .main { padding: 1.25rem; }
+  .page-header { flex-direction: column; align-items: flex-start; }
+  .page-header h2 { font-size: 1.5rem; }
+  .items-grid { grid-template-columns: 1fr; gap: 1rem; }
+  .form-row { grid-template-columns: 1fr; gap: 0; }
+  .map-header { flex-direction: column; }
+  .map-actions { width: 100%; }
+  .map-actions .btn { flex: 1; }
+  .stats-container { grid-template-columns: repeat(2, 1fr); }
+  .modal-form { padding: 1.25rem; }
+  .modal-header { padding: 1.25rem; }
 }
 
-::selection {
-  background: var(--primary);
-  color: white;
-}
+::selection { background: var(--primary); color: #04141f; }
 
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: var(--gis-bg-2); }
+::-webkit-scrollbar-thumb { background: var(--gis-border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--secondary); }
 
-::-webkit-scrollbar-track {
-  background: var(--background);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--secondary);
-}
-
-html {
-  scroll-behavior: smooth;
-}
+html { scroll-behavior: smooth; }

@@ -21,7 +21,7 @@ cd E:\就业\项目\trae
 # 关联远程仓库
 git remote add origin https://github.com/<你的用户名>/<仓库名>.git
 
-# 统一主分支名并推送（共 10 个 commit）
+# 统一主分支名并推送（共 16 个 commit）
 git branch -M master
 git push -u origin master
 ```
@@ -34,7 +34,7 @@ cp frontend/.env.example frontend/.env  # 填入你的高德 JSAPI key
 然后双击 `run.bat`，或按开发文档启动前后端。
 
 ## 提交历史一览
-`git log --oneline` 可见 10 个 commit，按 `feat` / `fix` / `chore` / `docs` / `test` / `opt` 分类，
+`git log --oneline` 可见 16 个 commit，按 `feat` / `fix` / `chore` / `docs` / `test` / `opt` 分类，
 信息为中文、语义清晰，适合作为简历作品集展示。
 
 ## 可选：忽略大文件 / 用 Git LFS

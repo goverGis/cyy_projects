@@ -37,6 +37,7 @@ function TerritoryPage() {
   const [bench, setBench] = useState(null)
   const [loading, setLoading] = useState(false)
   const [mapReady, setMapReady] = useState(false)
+  const [hud, setHud] = useState({ lat: 39.9042, lng: 116.4074, zoom: 11 })
   const [thinMode, setThinMode] = useState(false)
   const [detailTotal, setDetailTotal] = useState(0)
   const [view3D, setView3D] = useState(false)
@@ -149,10 +150,17 @@ function TerritoryPage() {
   useEffect(() => {
     if (!window.AMap || mapInstance.current) return
     const map = new window.AMap.Map(mapRef.current, {
-      zoom: 11, center: [116.4074, 39.9042], viewMode: '3D', pitch: 0, mapStyle: 'amap://styles/normal'
+      zoom: 11, center: [116.4074, 39.9042], viewMode: '3D', pitch: 0, mapStyle: 'amap://styles/dark'
     })
     mapInstance.current = map
     setMapReady(true)
+    const updateHud = () => {
+      const c = map.getCenter()
+      setHud({ lat: c.getLat(), lng: c.getLng(), zoom: map.getZoom() })
+    }
+    map.on('move', updateHud)
+    map.on('zoomend', updateHud)
+    updateHud()
     if (resultRef.current) renderRegions(resultRef.current, view3DRef.current)  // 应用方案可能先于地图就绪
     map.on('zoomend', () => refreshRef.current && refreshRef.current())
     return () => {
@@ -362,16 +370,43 @@ function TerritoryPage() {
         </div>
       )}
 
-      <div className="map-wrapper" style={{ position: 'relative' }}>
+      <div className="map-wrapper gis-map" style={{ position: 'relative' }}>
         <div className="map-container" ref={mapRef} style={{ height: '560px' }}></div>
         {!mapReady && <div className="map-loading"><div className="loading-spinner"></div><p>地图加载中…</p></div>}
+
+        {/* GIS 装饰层（定位框 / 准星 / 坐标 HUD / 指北针+比例尺） */}
+        <div className="gis-frame">
+          <span className="gis-corner tl" /><span className="gis-corner tr" />
+          <span className="gis-corner bl" /><span className="gis-corner br" />
+        </div>
+        <div className="reticle"><span className="reticle-dot" /></div>
+        <div className="hud-coord">
+          <div><span className="k">LAT&nbsp;</span><span className="v">{hud.lat.toFixed(4)}</span></div>
+          <div><span className="k">LNG&nbsp;</span><span className="v">{hud.lng.toFixed(4)}</span></div>
+          <div><span className="k">ZOOM</span><span className="v">&nbsp;{hud.zoom.toFixed(1)}</span></div>
+        </div>
+        <div className="hud-compass">
+          <div className="scale-bar">
+            <div>比例尺 ≈</div>
+            <div className="bar" />
+          </div>
+          <svg className="compass" viewBox="0 0 48 48" fill="none">
+            <circle cx="24" cy="24" r="21" stroke="rgba(94,234,212,0.7)" strokeWidth="1.5" />
+            <polygon points="24,5 29,24 24,21 19,24" fill="#f43f5e" />
+            <polygon points="24,43 19,24 24,27 29,24" fill="#5eead4" />
+            <text x="24" y="15" textAnchor="middle" fontSize="8" fill="#e6f1ff" fontFamily="monospace">N</text>
+          </svg>
+        </div>
+
         {result && (
           <div className="map-overlay-badge" style={{
-            position: 'absolute', top: 12, right: 12, background: 'rgba(255,255,255,.92)',
-            padding: '.4rem .7rem', borderRadius: 6, fontSize: '.8rem', boxShadow: '0 1px 4px rgba(0,0,0,.15)'
+            position: 'absolute', top: 12, left: 12, background: 'rgba(6,16,29,.86)',
+            border: '1px solid rgba(45,212,191,.4)', color: '#e6f1ff',
+            padding: '.45rem .75rem', borderRadius: 6, fontSize: '.78rem', boxShadow: '0 2px 8px rgba(0,0,0,.4)',
+            fontFamily: 'var(--mono)', zIndex: 7
           }}>
             地图点层：{thinMode ? '🔵 抽稀聚合视图' : `🔴 明细视图（视窗 ${detailTotal} 点，分页渲染）`}
-            {view3D && <div style={{ marginTop: '.3rem', color: '#3742fa' }}>🧊 3D 柱体高度 = 业务量权重（越高=负载越重）</div>}
+            {view3D && <div style={{ marginTop: '.3rem', color: '#5eead4' }}>🧊 3D 柱体高度 = 业务量权重（越高=负载越重）</div>}
           </div>
         )}
       </div>

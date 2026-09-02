@@ -25,6 +25,7 @@ function MapView() {
   const [showModal, setShowModal] = useState(false)
   const [currentLocation, setCurrentLocation] = useState(null)
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [hud, setHud] = useState({ lat: 39.9042, lng: 116.4074, zoom: 12 })
   const [formData, setFormData] = useState({
     type: 'secondhand',
     title: '',
@@ -63,7 +64,7 @@ function MapView() {
       zoom: 12,
       center: [116.4074, 39.9042],
       viewMode: '2D',
-      mapStyle: 'amap://styles/normal'
+      mapStyle: 'amap://styles/dark'
     })
 
     map.on('click', (e) => {
@@ -111,6 +112,13 @@ function MapView() {
 
     mapInstance.current = map
     setMapLoaded(true)
+    const updateHud = () => {
+      const c = map.getCenter()
+      setHud({ lat: c.getLat(), lng: c.getLng(), zoom: map.getZoom() })
+    }
+    map.on('move', updateHud)
+    map.on('zoomend', updateHud)
+    updateHud()
   }
 
   useEffect(() => {
@@ -250,7 +258,7 @@ function MapView() {
         </div>
       </div>
       
-      <div className="map-wrapper">
+      <div className="map-wrapper" style={{ position: 'relative' }}>
         <div className="map-container" ref={mapRef}></div>
         {!mapLoaded && (
           <div className="map-loading">
@@ -258,6 +266,17 @@ function MapView() {
             <p>地图加载中...</p>
           </div>
         )}
+
+        <div className="gis-frame">
+          <span className="gis-corner tl" /><span className="gis-corner tr" />
+          <span className="gis-corner bl" /><span className="gis-corner br" />
+        </div>
+        <div className="reticle"><span className="reticle-dot" /></div>
+        <div className="hud-coord">
+          <div><span className="k">LAT&nbsp;</span><span className="v">{hud.lat.toFixed(4)}</span></div>
+          <div><span className="k">LNG&nbsp;</span><span className="v">{hud.lng.toFixed(4)}</span></div>
+          <div><span className="k">ZOOM</span><span className="v">&nbsp;{hud.zoom.toFixed(1)}</span></div>
+        </div>
       </div>
       
       <div className="map-legend">
