@@ -17,6 +17,7 @@
 import argparse
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -60,26 +61,32 @@ def main():
             db.execute(text("TRUNCATE TABLE event RESTART IDENTITY CASCADE"))
             db.commit()
 
-        count = 0
-        for e in events:
-            db.add(
-                Event(
-                    type=e["type"],
-                    title=e["title"],
-                    description=e.get("description"),
-                    category=e.get("category"),
-                    price=e.get("price"),
-                    contact=e.get("contact"),
-                    weight=float(e.get("weight", 1.0)),
-                    status=e.get("status", "active"),
-                    source=e.get("source", "generator"),
-                    geom=from_shape(
-                        Point(float(e["longitude"]), float(e["latitude"])), srid=_SRID
-                    ),
-                )
+    count = 0
+    for e in events:
+        # created_at：造数器已播种过去 7 天时间戳；缺省则回退数据库默认值（func.now()）
+        ca = e.get("created_at")
+        if ca:
+            # JS toISOString 形如 2026-09-07T15:30:00.000Z（UTC，带时区）
+            ca = datetime.fromisoformat(ca.replace("Z", "+00:00"))
+        db.add(
+            Event(
+                type=e["type"],
+                title=e["title"],
+                description=e.get("description"),
+                category=e.get("category"),
+                price=e.get("price"),
+                contact=e.get("contact"),
+                weight=float(e.get("weight", 1.0)),
+                status=e.get("status", "active"),
+                source=e.get("source", "generator"),
+                created_at=ca,
+                geom=from_shape(
+                    Point(float(e["longitude"]), float(e["latitude"])), srid=_SRID
+                ),
             )
-            count += 1
-        db.commit()
+        )
+        count += 1
+    db.commit()
     print(f"✅ 导入完成，新增 {count} 条。")
 
 

@@ -28,6 +28,10 @@ class DivideRequest(BaseModel):
         default=False,
         description="生产级边界是否再裁剪到北京行政区（beijing_districts 表）；需先运行 scripts.load_beijing_districts 灌库",
     )
+    time_window: dict | None = Field(
+        default=None,
+        description="{'start': ISO, 'end': ISO}，仅对该时间窗内的事件划分（时间滑块用）；缺省为全量",
+    )
 
 
 class RegionOut(BaseModel):
@@ -36,6 +40,12 @@ class RegionOut(BaseModel):
     point_count: int
     centroid: list[float]          # [lng, lat]
     polygon: Any | None = None     # GeoJSON Polygon（Voronoi 边界）
+    # —— 出彩改造（P0）：让每个片区"说得清" ——
+    type_breakdown: dict[str, float] = {}   # 各类事件权重占比，如 {"secondhand": 1200.5, "emergency": 300.0}
+    capacity: float = 0.0                  # 片区承载上限（总容量 / K * 1.2，留 20% 余量）
+    load_ratio: float = 0.0                # weight / capacity，>1 即过载
+    overload: bool = False                 # load_ratio > 1
+    suggested_action: str | None = None    # "OK" / "拆分" / "新增服务点" / "合并"
 
 
 class DivideResponse(BaseModel):
@@ -46,6 +56,9 @@ class DivideResponse(BaseModel):
     regions: list[RegionOut]
     geojson: dict                  # FeatureCollection，供前端地图直接加载
     source: str = "database"       # database | file
+    # —— 出彩改造（P0）：把裸指标转成"决策建议" ——
+    balance_report: dict | None = None
+    recommendation: dict | None = None
 
 
 class BenchmarkRow(BaseModel):
@@ -55,8 +68,13 @@ class BenchmarkRow(BaseModel):
     max_radius_m: float
     mean_compactness: float
     capacity_violations: int
+    # —— 出彩改造（P1）：标注推荐算法 ——
+    is_recommended: bool = False
+    rank: int | None = None
+    score: float | None = None       # 综合评分（均衡/半径/紧凑度/零超容加权），越高越好
 
 
 class BenchmarkResponse(BaseModel):
     k: int
     rows: list[BenchmarkRow]
+    recommended_method: str | None = None

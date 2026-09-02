@@ -903,3 +903,79 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: var(--secondary); }
 
 html { scroll-behavior: smooth; }
+
+/* ===================== 出彩改造（P0）：时间滑块 / 均衡报告 / 负载卡片 ===================== */
+
+/* 时间滑块 */
+.time-slider {
+  margin: 1.25rem 0;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(135deg, rgba(13,28,47,.92), rgba(17,35,58,.92));
+  border: 1px solid var(--gis-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.ts-head { display: flex; align-items: center; gap: .9rem; margin-bottom: .7rem; }
+.ts-title { font-weight: 700; color: var(--primary-light); font-family: var(--mono); letter-spacing: .03em; }
+.ts-play { padding: .35rem .9rem; font-size: .82rem; }
+.ts-label { margin-left: auto; font-family: var(--mono); font-size: .82rem; color: var(--text-secondary); }
+.ts-range { width: 100%; accent-color: var(--primary); height: 6px; cursor: pointer; }
+.ts-ends { display: flex; justify-content: space-between; margin-top: .35rem; font-size: .72rem; color: var(--text-muted); font-family: var(--mono); }
+
+/* 过载脉冲标记（地图中心叠加） */
+@keyframes overloadPulse {
+  0%   { transform: scale(.7); opacity: .95; }
+  70%  { transform: scale(1.8); opacity: 0; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+.overload-pulse {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--danger);
+  box-shadow: 0 0 0 0 rgba(244,63,94,.8);
+  animation: overloadPulse 1.4s infinite ease-out;
+}
+
+/* 均衡报告卡 */
+.balance-report {
+  margin: 1.25rem 0;
+  padding: 1.1rem 1.25rem;
+  background: linear-gradient(135deg, rgba(13,28,47,.95), rgba(17,35,58,.95));
+  border: 1px solid var(--gis-border);
+  border-left: 3px solid var(--primary);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.br-head { display: flex; align-items: center; gap: 1rem; margin-bottom: .8rem; }
+.br-title { font-weight: 700; color: var(--text); font-size: 1.02rem; }
+.br-badge { font-family: var(--mono); font-size: .8rem; font-weight: 700; padding: .25rem .6rem; border-radius: 999px; }
+.br-badge.good { background: rgba(52,211,153,.15); color: var(--success); border: 1px solid rgba(52,211,153,.4); }
+.br-badge.warn { background: rgba(244,63,94,.15); color: var(--danger); border: 1px solid rgba(244,63,94,.4); }
+.br-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .8rem; margin-bottom: .8rem; }
+.br-metric { background: rgba(255,255,255,.03); border: 1px solid var(--gis-border-soft); border-radius: var(--radius-sm); padding: .7rem .8rem; text-align: center; }
+.br-metric .v { font-family: var(--mono); font-size: 1.5rem; font-weight: 700; color: var(--text); }
+.br-metric .l { font-size: .74rem; color: var(--text-secondary); margin-top: .2rem; }
+.br-verdict { font-size: .92rem; color: var(--text); line-height: 1.5; padding: .6rem .8rem; background: rgba(56,189,248,.08); border-radius: var(--radius-sm); border: 1px solid rgba(56,189,248,.18); }
+.br-rec { margin-top: .6rem; font-size: .82rem; color: var(--text-secondary); line-height: 1.5; }
+.br-rec strong { color: var(--accent-3); display: block; margin-bottom: .2rem; }
+
+/* 片区负载卡片 */
+.load-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .8rem; }
+.load-card { background: var(--gis-surface-2); border: 1px solid var(--gis-border); border-radius: var(--radius-sm); padding: .8rem .9rem; }
+.load-card.over { border-color: rgba(244,63,94,.55); box-shadow: 0 0 0 1px rgba(244,63,94,.25); }
+.load-card .lc-head { display: flex; align-items: center; justify-content: space-between; }
+.lc-name { font-weight: 700; color: var(--text); }
+.lc-badge { font-size: .72rem; font-weight: 700; padding: .15rem .5rem; border-radius: 999px; }
+.lc-badge.ok { background: rgba(52,211,153,.15); color: var(--success); }
+.lc-badge.low { background: rgba(56,189,248,.15); color: var(--secondary); }
+.lc-badge.over { background: rgba(244,63,94,.18); color: var(--danger); }
+.lc-weight { font-size: .78rem; color: var(--text-secondary); margin: .35rem 0 .5rem; font-family: var(--mono); }
+.lc-bar { height: 8px; background: rgba(255,255,255,.06); border-radius: 999px; overflow: hidden; }
+.lc-fill { height: 100%; border-radius: 999px; transition: width .35s ease; }
+.lc-fill.ok { background: linear-gradient(90deg, #34d399, #2dd4bf); }
+.lc-fill.low { background: linear-gradient(90deg, #38bdf8, #5eead4); }
+.lc-fill.over { background: linear-gradient(90deg, #fbbf24, #f43f5e); }
+.lc-meta { font-size: .72rem; color: var(--text-muted); margin-top: .35rem; font-family: var(--mono); }
+.lc-warn { color: var(--danger); font-weight: 700; }
+.lc-types { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .55rem; }
+.lc-type { font-size: .68rem; color: var(--text-secondary); border: 1px solid; border-radius: 4px; padding: .05rem .35rem; font-family: var(--mono); }
+.lc-type b { color: var(--text); }

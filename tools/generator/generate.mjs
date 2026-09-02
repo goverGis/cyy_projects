@@ -163,6 +163,40 @@ function pickType() {
   return "secondhand";
 }
 
+/* --------------------------- 时间分布（P0：时间滑块用） --------------------------- */
+// 固定在 2026-09-07 23:30 的「现在」，使造数可复现；覆盖过去 7 天（09-01 ~ 09-07）
+const NOW = new Date("2026-09-07T23:30:00+08:00").getTime();
+const DAYS = 7;
+const MS_DAY = 86400000;
+// 日权重：近期活动略多（演示「城市升温」趋势）
+const dayWeights = Array.from({ length: DAYS }, (_, i) => 0.85 + 0.3 * (i / (DAYS - 1)));
+const daySum = dayWeights.reduce((a, b) => a + b, 0);
+// 各类型日周期活跃时段（小时区间；discussion 夜间偏多用 [19,26) 跨午夜）
+const HOUR_RANGE = {
+  secondhand: [10, 22],
+  lostfound: [8, 21],
+  emergency: [0, 24],
+  discussion: [19, 26],
+};
+function pickDayOffset() {
+  const r = rnd() * daySum;
+  let acc = 0;
+  for (let i = 0; i < DAYS; i++) { acc += dayWeights[i]; if (r <= acc) return i; }
+  return DAYS - 1;
+}
+function pickHour(type) {
+  const [s, e] = HOUR_RANGE[type] || [8, 22];
+  const h = s + rnd() * (e - s);
+  return Math.floor(h) % 24;
+}
+function makeCreatedAt(type) {
+  const dayOffset = pickDayOffset();           // 0=6天前(09-01) ... 6=今天(09-07)
+  const dayMs = NOW - (DAYS - 1 - dayOffset) * MS_DAY;
+  const d = new Date(dayMs);
+  d.setHours(pickHour(type), randInt(0, 59), randInt(0, 59), 0);
+  return d.toISOString();
+}
+
 function makeEvent(idx, hotspot) {
   const type = pickType();
   const category = pick(CATEGORIES[type]);
@@ -188,6 +222,7 @@ function makeEvent(idx, hotspot) {
     price,
     contact: pick(CONTACTS),
     weight,
+    created_at: makeCreatedAt(type),
     latitude: lat,
     longitude: lng,
     status: "active",
@@ -212,6 +247,7 @@ fs.mkdirSync(OUT, { recursive: true });
 fs.writeFileSync(
   path.join(OUT, "events.json"),
   JSON.stringify({ city: CITY, seed: SEED, count: events.length, events }, null, 2)
+    // 注意：上面的 events 已含 created_at 字段
 );
 
 // 2) GeoJSON（前端地图直接加载）
@@ -234,11 +270,11 @@ const geojson = {
 fs.writeFileSync(path.join(OUT, "events.geojson"), JSON.stringify(geojson, null, 2));
 
 // 3) CSV（Excel 核查 / 算法离线处理）
-const header = ["id", "type", "title", "category", "weight", "latitude", "longitude", "price", "contact", "hotspot"];
+const header = ["id", "type", "title", "category", "weight", "latitude", "longitude", "price", "contact", "hotspot", "created_at"];
 const csv = [
   header.join(","),
   ...events.map((e) =>
-    [e.id, e.type, e.title, e.category, e.weight, e.latitude, e.longitude, e.price ?? "", e.contact, e.hotspot]
+    [e.id, e.type, e.title, e.category, e.weight, e.latitude, e.longitude, e.price ?? "", e.contact, e.hotspot, e.created_at]
       .map((v) => `"${String(v).replace(/"/g, '""')}"`)
       .join(",")
   ),

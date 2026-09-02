@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import MetricPanel from '../components/MetricPanel'
 import BenchmarkTable from '../components/BenchmarkTable'
-import RegionChipList from '../components/RegionChipList'
+import RegionLoadList from '../components/RegionLoadList'
+import BalanceReport from '../components/BalanceReport'
 
 const TYPE_COLORS = {
   secondhand: '#667eea',
@@ -14,6 +15,15 @@ const TYPE_COLORS = {
 function regionColor(i, total) {
   const hue = Math.round((i * 360) / Math.max(total, 1))
   return `hsl(${hue}, 65%, 55%)`
+}
+
+// 负载率 → 片区配色（绿=轻载，黄=临界，红=过载）
+function loadColor(ratio) {
+  if (ratio == null) return '#5eead4'
+  if (ratio > 1.0) return '#f43f5e'   // 过载
+  if (ratio > 0.85) return '#fbbf24'  // 临界
+  if (ratio > 0.6) return '#f59e0b'   // 中载
+  return '#34d399'                      // 轻载
 }
 
 // 抽稀阈值：视窗内点数超过该值 → 用聚合桶渲染（点抽稀），否则用明细点
@@ -44,6 +54,12 @@ function TerritoryPage() {
   const view3DRef = useRef(false)
   const [appliedName, setAppliedName] = useState(null)   // 来自参数市场的应用方案名
 
+  // 时间滑块（P0）：预取时间序列，拖动/播放直接渲染对应切片，无需每次打后端
+  const [series, setSeries] = useState([])
+  const [tsIndex, setTsIndex] = useState(0)
+  const [playing, setPlaying] = useState(false)
+  const playTimer = useRef(null)
+
   // 渲染片区 Voronoi 多边形（与抽稀无关，始终全量）
   // is3D=true 时按业务量权重拉伸成 3D 柱体（高度=权重，直观看出哪片过载）
   const renderRegions = (data, is3D = false) => {
@@ -54,7 +70,9 @@ function TerritoryPage() {
     feats.forEach(f => {
       const ring = f.geometry.coordinates[0]
       const path = ring.map(([lng, lat]) => [lng, lat])
-      const color = regionColor(f.properties.region_id, data.k)
+      // 配色由「负载率」驱动：绿(轻)→黄(中)→红(过载)，让地图直接表达负载
+      const ratio = f.properties.load_ratio
+      const color = loadColor(ratio)
       const w = f.properties.weight || 1
       // 3D 柱体高度：归一化到 [120, 3200] 米，权重越高柱体越高
       const height = is3D ? Math.max(120, Math.round((w / maxW) * 3200)) : 0
@@ -77,6 +95,19 @@ function TerritoryPage() {
       })
       text.setMap(map)
       regionLayerRef.current.push(text)
+
+      // 过载片区：地图中心叠加红色脉冲预警标记
+      if (f.properties.overload) {
+        const [clng, clat] = f.properties.centroid
+        const pulse = new window.AMap.Marker({
+          position: [clng, clat],
+          content: '<div class="overload-pulse"></div>',
+          anchor: 'center',
+          zIndex: 120,
+        })
+        pulse.setMap(map)
+        regionLayerRef.current.push(pulse)
+      }
     })
     try {
       map.setFitView(regionLayerRef.current.filter(o => o instanceof window.AMap.Polygon))
@@ -164,6 +195,7 @@ function TerritoryPage() {
     if (resultRef.current) renderRegions(resultRef.current, view3DRef.current)  // 应用方案可能先于地图就绪
     map.on('zoomend', () => refreshRef.current && refreshRef.current())
     return () => {
+      if (playTimer.current) clearInterval(playTimer.current)
       regionLayerRef.current.forEach(o => o.setMap && o.setMap(null))
       pointLayerRef.current.forEach(o => o.setMap && o.setMap(null))
       regionLayerRef.current = []
@@ -242,12 +274,67 @@ function TerritoryPage() {
       clearPointLayer()
       renderRegions(data, view3DRef.current)
       await refreshPointLayer()
+      fetchTimeseries(p)   // 预取时间序列，供时间滑块回放（不阻塞渲染）
     } catch (e) {
       console.error('划分失败', e)
       alert('划分失败，请确认后端（FastAPI :8000）已启动')
     } finally {
       setLoading(false)
     }
+  }
+
+  // 预取时间切片序列（steps=12），后端已按时间累积重划好，前端仅做回放
+  const fetchTimeseries = async (p) => {
+    try {
+      const qs = new URLSearchParams({ k: p.k, lam: p.lam, mu: p.mu, seed: p.seed, steps: 12 })
+      if (p.typeFilter && p.typeFilter.length) qs.set('type_filter', p.typeFilter.join(','))
+      const res = await fetch(`/api/territory/timeseries?${qs.toString()}`)
+      const data = await res.json()
+      if (data.series && data.series.length) {
+        setSeries(data.series)
+        setTsIndex(data.series.length - 1)   // 默认停在「全量」切片
+      } else {
+        setSeries([])
+      }
+    } catch (e) { console.error('timeseries 获取失败', e); setSeries([]) }
+  }
+
+  // 渲染某个时间切片（拖动/播放时调用）
+  const applySeriesItem = async (idx) => {
+    const item = series[idx]
+    if (!item) return
+    resultRef.current = item
+    setResult(item)
+    setMetrics(item.metrics)
+    regionLayerRef.current.forEach(o => o.setMap && o.setMap(null))
+    regionLayerRef.current = []
+    clearPointLayer()
+    renderRegions(item, view3DRef.current)
+    await refreshPointLayer()
+  }
+
+  // 时间滑块播放：自动逐片推进，到末尾停止
+  const togglePlay = () => {
+    if (playing) {
+      if (playTimer.current) clearInterval(playTimer.current)
+      setPlaying(false)
+      return
+    }
+    if (!series.length) return
+    setPlaying(true)
+    let i = tsIndex >= series.length - 1 ? 0 : tsIndex
+    setTsIndex(i)
+    applySeriesItem(i)
+    playTimer.current = setInterval(() => {
+      i += 1
+      if (i >= series.length) {
+        if (playTimer.current) clearInterval(playTimer.current)
+        setPlaying(false)
+        return
+      }
+      setTsIndex(i)
+      applySeriesItem(i)
+    }, 900)
   }
 
   const handleBenchmark = async () => {
@@ -352,6 +439,34 @@ function TerritoryPage() {
 
       {metrics && <MetricPanel metrics={metrics} />}
 
+      {/* 时间滑块（P0）：拖动/播放回放城市负载的时空演化 */}
+      {series.length > 1 && (
+        <div className="time-slider">
+          <div className="ts-head">
+            <span className="ts-title">⏱ 时间回放</span>
+            <button className="btn btn-outline ts-play" onClick={togglePlay}>
+              {playing ? '⏸ 暂停' : '▶ 播放'}
+            </button>
+            <span className="ts-label">
+              截至 {series[tsIndex]?.t} · {series[tsIndex]?.count} 事件
+            </span>
+          </div>
+          <input
+            type="range" min="0" max={series.length - 1} value={tsIndex}
+            onChange={(e) => { const v = parseInt(e.target.value); setTsIndex(v); applySeriesItem(v) }}
+            className="ts-range"
+          />
+          <div className="ts-ends">
+            <span>截至 {series[0]?.t}</span>
+            <span>截至 {series[series.length - 1]?.t}</span>
+          </div>
+        </div>
+      )}
+
+      {result && result.balance_report && (
+        <BalanceReport report={result.balance_report} recommendation={result.recommendation} />
+      )}
+
       {result && result.source && result.source.includes('pg_voronoi') && (
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: '.4rem', marginTop: '.75rem',
@@ -413,8 +528,8 @@ function TerritoryPage() {
 
       {result && (
         <div className="cluster-results">
-          <h3>片区清单（共 {result.regions.length} 个）</h3>
-          <RegionChipList regions={result.regions} k={result.k} />
+          <h3>片区负载清单（共 {result.regions.length} 个）</h3>
+          <RegionLoadList regions={result.regions} />
         </div>
       )}
     </div>

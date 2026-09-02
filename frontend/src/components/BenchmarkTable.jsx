@@ -25,6 +25,7 @@ const COLS = [
   { key: 'max_radius_m', label: '最大半径↓', fmt: v => Math.round(v) },
   { key: 'mean_compactness', label: '紧凑度↑' },
   { key: 'capacity_violations', label: '超容↓' },
+  { key: 'score', label: '综合分↑' },
 ]
 
 export default function BenchmarkTable({ rows, k, highlight = 'capacity-constrained' }) {
@@ -38,23 +39,30 @@ export default function BenchmarkTable({ rows, k, highlight = 'capacity-constrai
         </tr>
       </thead>
       <tbody>
-        {rows.map(r => (
-          <tr key={r.method} style={{ borderBottom: '1px solid #f0f0f0' }}>
-            <td style={{ padding: '.4rem', fontWeight: r.method === highlight ? 700 : 400 }}>
-              {METHOD_LABELS[r.method] || r.method}
-            </td>
-            {COLS.map(c => {
-              const v = r[c.key]
-              const txt = c.fmt ? c.fmt(v) : v
-              const ok = c.key === 'capacity_violations' && v === 0
-              return (
-                <td key={c.key} style={{ padding: '.4rem', color: ok ? '#2ed573' : undefined }}>
-                  {txt}
-                </td>
-              )
-            })}
-          </tr>
-        ))}
+        {rows.map(r => {
+          const isRec = r.is_recommended
+          return (
+            <tr key={r.method} style={{ borderBottom: '1px solid #f0f0f0', background: isRec ? 'rgba(45,212,191,0.10)' : undefined }}>
+              <td style={{ padding: '.4rem', fontWeight: 700 }}>
+                {isRec && <span style={{ color: 'var(--accent-3)' }}>★ </span>}
+                {METHOD_LABELS[r.method] || r.method}
+                {r.rank != null && <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '.75rem' }}> · #{r.rank}</span>}
+              </td>
+              {COLS.map(c => {
+                const v = r[c.key]
+                if (v == null) return <td key={c.key} style={{ padding: '.4rem', color: 'var(--text-muted)' }}>—</td>
+                const txt = c.fmt ? c.fmt(v) : v
+                const ok = c.key === 'capacity_violations' && v === 0
+                const best = c.key === 'score' && isRec
+                return (
+                  <td key={c.key} style={{ padding: '.4rem', color: ok ? '#2ed573' : best ? 'var(--primary)' : undefined, fontWeight: best ? 700 : 400 }}>
+                    {txt}
+                  </td>
+                )
+              })}
+            </tr>
+          )
+        })}
       </tbody>
     </table>
   )
