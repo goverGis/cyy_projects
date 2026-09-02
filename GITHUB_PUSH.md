@@ -21,7 +21,7 @@ cd E:\就业\项目\trae
 # 关联远程仓库
 git remote add origin https://github.com/<你的用户名>/<仓库名>.git
 
-# 统一主分支名并推送（共 19 个 commit）
+# 统一主分支名并推送当前全部 commit
 git branch -M master
 git push -u origin master
 ```
