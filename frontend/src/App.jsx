@@ -8,6 +8,35 @@ import DiscussionPage from './pages/DiscussionPage'
 import DeveloperPage from './pages/DeveloperPage'
 import TerritoryPage from './pages/TerritoryPage'
 
+/* ---- 错误边界：子组件抛错时显示信息而不是黑屏 ---- */
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error }
+  }
+  componentDidCatch(error, info) {
+    console.error('ErrorBoundary caught:', error, info)
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          padding: '2rem', color: '#f43f5e', fontFamily: 'monospace', whiteSpace: 'pre-wrap',
+          background: 'rgba(6,16,29,0.95)', border: '1px solid #f43f5e', borderRadius: 12, margin: '2rem'
+        }}>
+          <h2 style={{ marginBottom: '1rem' }}>页面渲染出错</h2>
+            <div>{this.state.error?.toString?.() || '未知错误'}</div>
+            <div style={{ marginTop: '1rem', color: '#9bb4d0' }}>请打开浏览器控制台（F12 → Console）查看完整堆栈。</div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 /* ---- 导航图标（内联 SVG，描边随 currentColor） ---- */
 const Icon = {
   map: (
@@ -114,15 +143,17 @@ function App() {
         </nav>
       </header>
       <main className="main">
-        <Routes>
-          <Route path="/" element={<MapView />} />
-          <Route path="/secondhand" element={<SecondhandPage />} />
-          <Route path="/lostfound" element={<LostFoundPage />} />
-          <Route path="/emergency" element={<EmergencyPage />} />
-          <Route path="/discussion" element={<DiscussionPage />} />
-          <Route path="/developer" element={<DeveloperPage />} />
-          <Route path="/cluster" element={<TerritoryPage />} />
-        </Routes>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<MapView />} />
+            <Route path="/secondhand" element={<SecondhandPage />} />
+            <Route path="/lostfound" element={<LostFoundPage />} />
+            <Route path="/emergency" element={<EmergencyPage />} />
+            <Route path="/discussion" element={<DiscussionPage />} />
+            <Route path="/developer" element={<DeveloperPage />} />
+            <Route path="/cluster" element={<TerritoryPage />} />
+          </Routes>
+        </ErrorBoundary>
       </main>
     </div>
   )

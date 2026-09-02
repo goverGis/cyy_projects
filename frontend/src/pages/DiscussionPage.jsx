@@ -27,7 +27,7 @@ function DiscussionPage() {
       setLoading(true)
       const res = await fetch('/api/items?type=discussion&status=active')
       const data = await res.json()
-      setItems(data)
+      setItems(data.items || data || [])
     } catch (error) {
       console.error('Failed to fetch items:', error)
     } finally {
