@@ -8,7 +8,7 @@
 - ✅ 高德 key 只存在于本地 `frontend/.env`（已被忽略）
 - ✅ `config.py` 默认连接串为占位符 `postgres:postgres`，本地靠 `api/.env` 覆盖
 - ✅ 调试残留 `_agg*.json` / `_items2.json` 已停止跟踪
-- ✅ 已扫描 tracked 文件：无 `:postgresql@`、无硬编码高德 key、无非示例 `.env`
+- ✅ 已扫描 tracked 文件：无真实 DB 连接密码、无硬编码高德 key、无非示例 `.env`
 
 ## 1. 在 GitHub 新建空仓库
 到 https://github.com/new 创建一个**空仓库**（不要勾选 README / .gitignore / License），
@@ -21,7 +21,7 @@ cd E:\就业\项目\trae
 # 关联远程仓库
 git remote add origin https://github.com/<你的用户名>/<仓库名>.git
 
-# 统一主分支名并推送（共 16 个 commit）
+# 统一主分支名并推送（共 19 个 commit）
 git branch -M master
 git push -u origin master
 ```
