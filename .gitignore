@@ -41,3 +41,8 @@ test-results/
 # 生成的演示数据（可由造数器重新生成，种子固定）
 data/
 tools/data/
+
+# 本地调试临时文件（非源码，未在任何代码中引用）
+_agg.json
+_agg2.json
+_items2.json
