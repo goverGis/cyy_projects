@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
 import MapView from './components/MapView'
+import HomePage from './pages/HomePage'
 import SecondhandPage from './pages/SecondhandPage'
 import LostFoundPage from './pages/LostFoundPage'
 import EmergencyPage from './pages/EmergencyPage'
@@ -39,6 +40,11 @@ class ErrorBoundary extends React.Component {
 
 /* ---- 导航图标（内联 SVG，描边随 currentColor） ---- */
 const Icon = {
+  home: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9.5l9-7 9 7v9a2 2 0 0 1-2 2h-4v-6h-6v6H5a2 2 0 0 1-2-2z" />
+    </svg>
+  ),
   map: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
@@ -81,7 +87,8 @@ const Icon = {
 }
 
 const NAV = [
-  { to: '/', label: '地图', icon: Icon.map },
+  { to: '/', label: '首页', icon: Icon.home },
+  { to: '/map', label: '地图', icon: Icon.map },
   { to: '/secondhand', label: '闲置物品', icon: Icon.box },
   { to: '/lostfound', label: '寻物启事', icon: Icon.search },
   { to: '/emergency', label: '紧急医疗', icon: Icon.medical },
@@ -145,7 +152,8 @@ function App() {
       <main className="main">
         <ErrorBoundary>
           <Routes>
-            <Route path="/" element={<MapView />} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/map" element={<MapView />} />
             <Route path="/secondhand" element={<SecondhandPage />} />
             <Route path="/lostfound" element={<LostFoundPage />} />
             <Route path="/emergency" element={<EmergencyPage />} />
