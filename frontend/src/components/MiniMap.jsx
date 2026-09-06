@@ -20,7 +20,7 @@ function MiniMap({
     const map = new window.AMap.Map(mapRef.current, {
       zoom: 12,
       center: [116.4074, 39.9042],
-      mapStyle: 'amap://styles/dark'
+      mapStyle: 'amap://styles/fresh'
     })
 
     map.on('click', (e) => {

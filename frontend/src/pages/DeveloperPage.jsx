@@ -1,20 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MetricPanel from '../components/MetricPanel'
-import RegionChipList from '../components/RegionChipList'
+import RegionCardList, { regionColor, EVENT_COLORS } from '../components/RegionCardList'
 
-const TYPE_COLORS = {
-  secondhand: '#667eea',
-  lostfound: '#ff4757',
-  emergency: '#f44336',
-  discussion: '#2ed573'
-}
+const TYPE_COLORS = { ...EVENT_COLORS }
 const ALL_TYPES = ['secondhand', 'lostfound', 'emergency', 'discussion']
-
-function regionColor(i, total) {
-  const hue = Math.round((i * 360) / Math.max(total, 1))
-  return `hsl(${hue}, 65%, 55%)`
-}
 
 // 把方案参数编码进 URL，生成「可分享链接」——无需后端存储、无需登录即可在大图还原
 function buildShareUrl(s) {
@@ -34,7 +24,7 @@ function SchemePreviewMap({ geojson, height = '340px' }) {
   useEffect(() => {
     if (mapInstance.current || !window.AMap) return
     const map = new window.AMap.Map(mapRef.current, {
-      zoom: 11, center: [116.4074, 39.9042], viewMode: '2D', mapStyle: 'amap://styles/dark'
+      zoom: 11, center: [116.4074, 39.9042], viewMode: '2D', mapStyle: 'amap://styles/fresh'
     })
     mapInstance.current = map
     return () => { if (mapInstance.current) { mapInstance.current.destroy(); mapInstance.current = null } }
@@ -364,7 +354,7 @@ function DeveloperPage() {
               </div>
               <div className="cluster-results">
                 <h3>片区清单（共 {run.regions.length} 个）</h3>
-                <RegionChipList regions={run.regions} k={run.k} />
+                <RegionCardList regions={run.regions} />
               </div>
             </>
           )}

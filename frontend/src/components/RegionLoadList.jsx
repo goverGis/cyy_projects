@@ -9,12 +9,7 @@ import React from 'react'
  *   - 类型构成明细（各类事件权重占比）
  */
 
-const TYPE_COLORS = {
-  secondhand: '#667eea',
-  lostfound: '#ff4757',
-  emergency: '#f44336',
-  discussion: '#2ed573',
-}
+import { EVENT_COLORS as TYPE_COLORS } from './RegionCardList'
 
 export default function RegionLoadList({ regions }) {
   if (!regions || !regions.length) return null

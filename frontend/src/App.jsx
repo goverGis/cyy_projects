@@ -25,12 +25,12 @@ class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return (
         <div style={{
-          padding: '2rem', color: '#f43f5e', fontFamily: 'monospace', whiteSpace: 'pre-wrap',
-          background: 'rgba(6,16,29,0.95)', border: '1px solid #f43f5e', borderRadius: 12, margin: '2rem'
+          padding: '2rem', color: 'var(--danger)', fontFamily: 'monospace', whiteSpace: 'pre-wrap',
+          background: '#ffffff', border: '1px solid var(--danger)', borderRadius: 12, margin: '2rem'
         }}>
           <h2 style={{ marginBottom: '1rem' }}>页面渲染出错</h2>
             <div>{this.state.error?.toString?.() || '未知错误'}</div>
-            <div style={{ marginTop: '1rem', color: '#9bb4d0' }}>请打开浏览器控制台（F12 → Console）查看完整堆栈。</div>
+            <div style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>请打开浏览器控制台（F12 → Console）查看完整堆栈。</div>
         </div>
       )
     }
@@ -121,12 +121,12 @@ function App() {
         <div className="header-bar">
           <div className="brand">
             <span className="brand-mark">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5eead4" strokeWidth="1.6">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2f9e6b" strokeWidth="1.6">
                 <circle cx="12" cy="12" r="9" />
-                <line x1="12" y1="1.5" x2="12" y2="22.5" stroke="#38bdf8" />
-                <line x1="1.5" y1="12" x2="22.5" y2="12" stroke="#38bdf8" />
-                <polygon points="12,3 14.5,12 12,12" fill="#5eead4" stroke="none" />
-                <circle cx="12" cy="12" r="1.6" fill="#5eead4" stroke="none" />
+                <line x1="12" y1="1.5" x2="12" y2="22.5" stroke="#4a90d9" />
+                <line x1="1.5" y1="12" x2="22.5" y2="12" stroke="#4a90d9" />
+                <polygon points="12,3 14.5,12 12,12" fill="#2f9e6b" stroke="none" />
+                <circle cx="12" cy="12" r="1.6" fill="#2f9e6b" stroke="none" />
               </svg>
             </span>
             <div className="brand-text">

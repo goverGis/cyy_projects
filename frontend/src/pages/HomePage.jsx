@@ -53,12 +53,12 @@ export default function HomePage() {
         <svg className="hero-network" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice">
           <defs>
             <radialGradient id="nodeGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#2dd4bf" stopOpacity=".45" />
-              <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0" />
+              <stop offset="0%" stopColor="#4caf72" stopOpacity=".45" />
+              <stop offset="100%" stopColor="#4caf72" stopOpacity="0" />
             </radialGradient>
             <linearGradient id="linkGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#38bdf8" stopOpacity=".3" />
-              <stop offset="100%" stopColor="#2dd4bf" stopOpacity=".05" />
+              <stop offset="0%" stopColor="#4a90d9" stopOpacity=".3" />
+              <stop offset="100%" stopColor="#4caf72" stopOpacity=".05" />
             </linearGradient>
           </defs>
           {/* 城市节点与连接线（示意性） */}
@@ -85,7 +85,7 @@ export default function HomePage() {
             <circle cx="920" cy="420" r="7" />
             <circle cx="560" cy="150" r="8" />
           </g>
-          <g fill="#2dd4bf" fillOpacity=".85">
+          <g fill="#2f9e6b" fillOpacity=".85">
             <circle cx="200" cy="420" r="2.5" />
             <circle cx="380" cy="260" r="3" />
             <circle cx="520" cy="340" r="2.8" />

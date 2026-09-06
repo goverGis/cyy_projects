@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react'
 
+// 业务事件类型配色（自然色系）
 const COLORS = {
-  secondhand: '#667eea',
-  lostfound: '#ff4757',
-  emergency: '#f44336',
-  discussion: '#2ed573',
-  cluster: '#ffc107'
+  secondhand: '#4a90d9',
+  lostfound: '#e2604f',
+  emergency: '#d9a93a',
+  discussion: '#3aa89b',
+  cluster: '#e0a73e'
 }
 
 const TYPE_NAMES = {
@@ -15,13 +16,13 @@ const TYPE_NAMES = {
   discussion: '区域讨论'
 }
 
-// POI 语义色（与后端 / 区域划分页保持一致）
+// POI 语义色（自然色系：与 RegionCardList / index.css --poi-* 保持一致）
 const POI_COLORS = {
-  residential: '#00e676',
-  mall: '#ff9100',
-  medical: '#ff1744',
-  leisure: '#00b0ff',
-  education: '#d500f9'
+  residential: '#4caf72',
+  mall: '#e08a4b',
+  medical: '#e2604f',
+  leisure: '#4a90d9',
+  education: '#8b7fd6'
 }
 const POI_LABELS = {
   residential: '小区/住宅',
@@ -80,7 +81,7 @@ function MapView() {
       zoom: 12,
       center: [116.4074, 39.9042],
       viewMode: '2D',
-      mapStyle: 'amap://styles/dark'
+      mapStyle: 'amap://styles/fresh'
     })
 
     map.on('click', (e) => {

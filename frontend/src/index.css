@@ -1,50 +1,50 @@
 :root {
-  /* ===== 赛博霓虹配色（深色底 + 高饱和霓虹） ===== */
-  --gis-bg: #05060f;
-  --gis-bg-2: #0a0e1f;
-  --gis-surface: rgba(14, 20, 40, 0.9);
-  --gis-surface-solid: #0e1430;
-  --gis-surface-2: #131a3a;
-  --gis-surface-3: #1a234d;
-  --gis-border: #2a3a6b;
-  --gis-border-soft: #1a2444;
-  --gis-grid: rgba(120, 90, 255, 0.06);
+  /* ===== 浅色 · 自然地理配色（纸感底 + 自然色系） ===== */
+  --gis-bg: #eef3ec;            /* 浅米绿纸底 */
+  --gis-bg-2: #e6eee4;
+  --gis-surface: rgba(255, 255, 255, 0.92);
+  --gis-surface-solid: #ffffff;
+  --gis-surface-2: #f3f7f1;    /* 极浅绿 */
+  --gis-surface-3: #eaf1ec;
+  --gis-border: #d6e0d4;       /* 浅苔绿边框 */
+  --gis-border-soft: #e6eee4;
+  --gis-grid: rgba(90, 130, 90, 0.06);
 
-  --primary: #00e5ff;          /* 霓虹青 */
-  --primary-dark: #00b8d4;
-  --primary-light: #6cf3ff;
-  --secondary: #b14bff;        /* 霓虹紫 */
-  --accent-3: #ff2bd6;         /* 霓虹品红 */
-  --success: #00e676;
-  --warning: #ffea00;
-  --danger: #ff1744;
+  --primary: #2f9e6b;          /* 叶绿 */
+  --primary-dark: #247a54;
+  --primary-light: #5bbd8c;
+  --secondary: #4a90d9;        /* 天蓝 */
+  --accent-3: #e08a3c;         /* 暖阳橙 */
+  --success: #3a9d5d;
+  --warning: #e0a73e;
+  --danger: #e2604f;
 
-  /* POI 语义色（小区/商场/医疗/休闲/教育） */
-  --poi-residential: #00e676;  /* 绿 */
-  --poi-mall: #ff9100;         /* 橙 */
-  --poi-medical: #ff1744;      /* 红 */
-  --poi-leisure: #00b0ff;      /* 蓝 */
-  --poi-education: #d500f9;    /* 紫 */
+  /* POI 语义色（自然色系：小区/商场/医疗/休闲/教育） */
+  --poi-residential: #4caf72;  /* 叶绿 */
+  --poi-mall: #e08a4b;         /* 暖橙 */
+  --poi-medical: #e2604f;      /* 珊瑚红 */
+  --poi-leisure: #4a90d9;      /* 天蓝 */
+  --poi-education: #8b7fd6;    /* 薰衣紫 */
 
   --background: var(--gis-bg);
   --background-secondary: var(--gis-bg-2);
   --surface: var(--gis-surface-solid);
-  --text: #eaf2ff;
-  --text-secondary: #a9bce0;
-  --text-muted: #6b7aa8;
+  --text: #243024;             /* 深林墨绿 */
+  --text-secondary: #5b6b5b;
+  --text-muted: #8a978a;
   --border: var(--gis-border);
   --border-light: var(--gis-border-soft);
 
-  --glow-cyan: 0 0 18px -2px rgba(0, 229, 255, 0.6);
-  --glow-magenta: 0 0 20px -2px rgba(255, 43, 214, 0.55);
-  --glow-violet: 0 0 20px -2px rgba(177, 75, 255, 0.5);
+  --glow-cyan: 0 2px 10px -2px rgba(47, 158, 107, 0.22);
+  --glow-magenta: 0 2px 10px -2px rgba(224, 138, 60, 0.22);
+  --glow-violet: 0 2px 10px -2px rgba(74, 144, 217, 0.22);
 
   --mono: 'JetBrains Mono', 'SFMono-Regular', 'Roboto Mono', Consolas, 'Liberation Mono', monospace;
 
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-  --shadow: 0 6px 18px -6px rgb(0 0 0 / 0.55);
-  --shadow-md: 0 12px 28px -10px rgb(0 0 0 / 0.6);
-  --shadow-lg: 0 24px 48px -16px rgb(0 0 0 / 0.7);
+  --shadow-sm: 0 1px 2px 0 rgb(40 60 40 / 0.08);
+  --shadow: 0 6px 18px -8px rgb(40 60 40 / 0.18);
+  --shadow-md: 0 12px 28px -12px rgb(40 60 40 / 0.22);
+  --shadow-lg: 0 24px 48px -18px rgb(40 60 40 / 0.28);
   --radius: 12px;
   --radius-sm: 8px;
   --radius-lg: 16px;
@@ -67,14 +67,14 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--gis-bg);
-  /* 霓虹光晕 + 经纬网格（赛博城市质感） */
+  /* 自然光晕 + 经纬网格（清新地理纸感） */
   background-image:
-    radial-gradient(ellipse 55% 45% at 12% 16%, rgba(0, 229, 255, 0.14), transparent 60%),
-    radial-gradient(ellipse 50% 40% at 88% 12%, rgba(177, 75, 255, 0.12), transparent 60%),
-    radial-gradient(ellipse 60% 50% at 80% 90%, rgba(255, 43, 214, 0.10), transparent 60%),
-    radial-gradient(ellipse 45% 50% at 24% 92%, rgba(0, 230, 118, 0.07), transparent 60%),
-    repeating-linear-gradient(0deg, rgba(120, 150, 255, 0.05) 0 1px, transparent 1px 46px),
-    repeating-linear-gradient(90deg, rgba(120, 150, 255, 0.05) 0 1px, transparent 1px 46px);
+    radial-gradient(ellipse 55% 45% at 12% 16%, rgba(74, 144, 217, 0.10), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 88% 12%, rgba(224, 138, 60, 0.08), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 90%, rgba(47, 158, 107, 0.09), transparent 60%),
+    radial-gradient(ellipse 45% 50% at 24% 92%, rgba(139, 127, 214, 0.07), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(90, 130, 90, 0.045) 0 1px, transparent 1px 46px),
+    repeating-linear-gradient(90deg, rgba(90, 130, 90, 0.045) 0 1px, transparent 1px 46px);
   background-attachment: fixed;
   min-height: 100vh;
 }
@@ -88,10 +88,10 @@ body {
 /* ===================== 顶栏 / GIS 控制台 ===================== */
 .header {
   background:
-    linear-gradient(180deg, rgba(8, 20, 36, 0.96) 0%, rgba(6, 16, 29, 0.98) 100%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(243, 247, 241, 0.98) 100%);
   color: var(--text);
   border-bottom: 1px solid var(--gis-border);
-  box-shadow: 0 6px 24px -8px rgba(0, 0, 0, 0.7), inset 0 -1px 0 rgba(45, 212, 191, 0.25);
+  box-shadow: 0 6px 24px -12px rgba(40, 60, 40, 0.25), inset 0 -1px 0 rgba(47, 158, 107, 0.18);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -119,9 +119,9 @@ body {
   display: grid;
   place-items: center;
   border-radius: 10px;
-  background: radial-gradient(circle at 30% 30%, rgba(45, 212, 191, 0.25), rgba(13, 28, 47, 0.6));
-  border: 1px solid rgba(45, 212, 191, 0.5);
-  box-shadow: 0 0 18px -4px rgba(45, 212, 191, 0.6), inset 0 0 12px rgba(45, 212, 191, 0.15);
+  background: radial-gradient(circle at 30% 30%, rgba(91, 189, 140, 0.30), rgba(255, 255, 255, 0.85));
+  border: 1px solid rgba(47, 158, 107, 0.5);
+  box-shadow: 0 2px 10px -3px rgba(47, 158, 107, 0.35), inset 0 0 12px rgba(91, 189, 140, 0.15);
   flex-shrink: 0;
 }
 
@@ -135,7 +135,7 @@ body {
   font-size: 1.3rem;
   font-weight: 800;
   letter-spacing: 0.04em;
-  background: linear-gradient(90deg, #00e5ff, #b14bff 55%, #ff2bd6);
+  background: linear-gradient(90deg, #2f9e6b, #4a90d9 55%, #e08a3c);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -167,7 +167,7 @@ body {
   padding: 0.35rem 0.7rem;
   border: 1px solid var(--gis-border-soft);
   border-radius: 999px;
-  background: rgba(13, 28, 47, 0.6);
+  background: rgba(255, 255, 255, 0.65);
 }
 
 .hud-item b {
@@ -325,13 +325,13 @@ body {
 
 .btn-primary {
   background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-  color: #04141f;
-  box-shadow: 0 6px 18px -6px rgba(45, 212, 191, 0.6);
+  color: #ffffff;
+  box-shadow: 0 6px 18px -6px rgba(47, 158, 107, 0.55);
   font-weight: 700;
 }
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 10px 26px -6px rgba(45, 212, 191, 0.75);
+  box-shadow: 0 10px 26px -6px rgba(47, 158, 107, 0.7);
 }
 .btn-primary:active { transform: translateY(0); }
 
@@ -515,7 +515,7 @@ body {
   background: linear-gradient(90deg, var(--primary), var(--secondary));
   opacity: 0.7;
 }
-.stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: rgba(45, 212, 191, 0.4); }
+.stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: rgba(47, 158, 107, 0.45); }
 .stat-card .value {
   font-size: 2.4rem;
   font-weight: 800;
@@ -745,7 +745,7 @@ body {
   overflow: hidden;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--gis-border);
-  background: #04101c;
+  background: #e9efe7;
 }
 .map-container { height: calc(100vh - 300px); min-height: 450px; }
 
@@ -838,9 +838,9 @@ body {
   z-index: 7;
   font-family: var(--mono);
   font-size: 0.72rem;
-  color: var(--primary-light);
-  background: rgba(6, 16, 29, 0.82);
-  border: 1px solid rgba(45, 212, 191, 0.4);
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid var(--gis-border);
   border-radius: 6px;
   padding: 0.4rem 0.7rem;
   letter-spacing: 0.03em;
@@ -849,7 +849,7 @@ body {
   line-height: 1.5;
 }
 .hud-coord .k { color: var(--text-muted); }
-.hud-coord .v { color: #e6f1ff; }
+.hud-coord .v { color: var(--text); font-weight: 600; }
 
 /* ---- 指北针 + 比例尺（右下） ---- */
 .hud-compass {
@@ -869,7 +869,7 @@ body {
   font-family: var(--mono);
   font-size: 0.66rem;
   color: var(--text-secondary);
-  background: rgba(6, 16, 29, 0.82);
+  background: rgba(255, 255, 255, 0.88);
   border: 1px solid var(--gis-border);
   border-radius: 6px;
   padding: 0.35rem 0.55rem;
@@ -880,8 +880,8 @@ body {
   width: 90px;
   margin-top: 3px;
   background:
-    linear-gradient(90deg, #e6f1ff 0 50%, transparent 50% 100%) 0 0 / 15px 100% repeat-x;
-  border: 1px solid rgba(230, 241, 255, 0.5);
+    linear-gradient(90deg, var(--primary) 0 50%, transparent 50% 100%) 0 0 / 15px 100% repeat-x;
+  border: 1px solid rgba(47, 158, 107, 0.5);
   border-top: none;
 }
 
@@ -906,7 +906,7 @@ body {
   .modal-header { padding: 1.25rem; }
 }
 
-::selection { background: var(--primary); color: #04141f; }
+::selection { background: var(--primary); color: #ffffff; }
 
 ::-webkit-scrollbar { width: 9px; height: 9px; }
 ::-webkit-scrollbar-track { background: var(--gis-bg-2); }
@@ -980,11 +980,11 @@ html { scroll-behavior: smooth; }
 .lc-badge.low { background: rgba(56,189,248,.15); color: var(--secondary); }
 .lc-badge.over { background: rgba(244,63,94,.18); color: var(--danger); }
 .lc-weight { font-size: .78rem; color: var(--text-secondary); margin: .35rem 0 .5rem; font-family: var(--mono); }
-.lc-bar { height: 8px; background: rgba(255,255,255,.06); border-radius: 999px; overflow: hidden; }
+.lc-bar { height: 8px; background: rgba(40, 60, 40, 0.08); border-radius: 999px; overflow: hidden; }
 .lc-fill { height: 100%; border-radius: 999px; transition: width .35s ease; }
-.lc-fill.ok { background: linear-gradient(90deg, #34d399, #2dd4bf); }
-.lc-fill.low { background: linear-gradient(90deg, #38bdf8, #5eead4); }
-.lc-fill.over { background: linear-gradient(90deg, #fbbf24, #f43f5e); }
+.lc-fill.ok { background: linear-gradient(90deg, #4caf72, #8fce7b); }
+.lc-fill.low { background: linear-gradient(90deg, #4a90d9, #7fc0e8); }
+.lc-fill.over { background: linear-gradient(90deg, #e0a73e, #e2604f); }
 .lc-meta { font-size: .72rem; color: var(--text-muted); margin-top: .35rem; font-family: var(--mono); }
 .lc-warn { color: var(--danger); font-weight: 700; }
 .lc-types { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .55rem; }
@@ -1010,8 +1010,8 @@ html { scroll-behavior: smooth; }
 .hero-grid {
   position: absolute; inset: 0;
   background-image:
-    linear-gradient(rgba(56,189,248,.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(56,189,248,.04) 1px, transparent 1px);
+    linear-gradient(rgba(47,158,107,.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(47,158,107,.07) 1px, transparent 1px);
   background-size: 60px 60px;
   mask-image: radial-gradient(ellipse at 60% 40%, black 0%, transparent 70%);
 }
@@ -1053,7 +1053,7 @@ html { scroll-behavior: smooth; }
 }
 .hero-accent {
   color: var(--primary);
-  text-shadow: 0 0 30px rgba(45,212,191,.35);
+  text-shadow: none;
 }
 .hero-sub {
   font-size: clamp(1rem, 2vw, 1.18rem);
@@ -1071,7 +1071,7 @@ html { scroll-behavior: smooth; }
 }
 .hero-stats.loading .hero-value { opacity: .55; }
 .hero-card {
-  background: linear-gradient(135deg, rgba(13,28,47,.92), rgba(17,35,58,.92));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(243, 247, 241, 0.95));
   border: 1px solid var(--gis-border);
   border-top: 2px solid var(--primary);
   border-radius: var(--radius);
@@ -1111,56 +1111,56 @@ html { scroll-behavior: smooth; }
   .hero-cta { width: 100%; }
 }
 
-/* ===================== 赛博霓虹增强 ===================== */
+/* ===================== 浅色自然增强 ===================== */
 .btn-primary {
-  background: linear-gradient(135deg, #00e5ff, #b14bff);
-  border: 1px solid rgba(0, 229, 255, 0.5);
-  color: #04121a;
+  background: linear-gradient(135deg, #2f9e6b, #4a90d9);
+  border: 1px solid rgba(47, 158, 107, 0.5);
+  color: #ffffff;
   font-weight: 700;
   box-shadow: var(--glow-cyan);
   transition: all var(--transition-fast);
 }
 .btn-primary:hover:not(:disabled) {
-  box-shadow: 0 0 26px -2px rgba(0, 229, 255, 0.85), 0 0 26px -4px rgba(177, 75, 255, 0.6);
+  box-shadow: 0 4px 16px -4px rgba(47, 158, 107, 0.5);
   transform: translateY(-1px);
 }
 .btn-outline {
-  background: rgba(177, 75, 255, 0.06);
-  border: 1px solid rgba(177, 75, 255, 0.45);
-  color: var(--primary-light);
+  background: rgba(224, 138, 60, 0.08);
+  border: 1px solid rgba(224, 138, 60, 0.45);
+  color: var(--accent-3);
   transition: all var(--transition-fast);
 }
 .btn-outline:hover {
-  background: rgba(177, 75, 255, 0.14);
-  box-shadow: var(--glow-violet);
+  background: rgba(224, 138, 60, 0.16);
+  box-shadow: var(--glow-magenta);
 }
 .btn-secondary {
-  background: rgba(0, 229, 255, 0.1);
-  border: 1px solid rgba(0, 229, 255, 0.4);
-  color: var(--primary-light);
+  background: rgba(47, 158, 107, 0.1);
+  border: 1px solid rgba(47, 158, 107, 0.4);
+  color: var(--primary-dark);
 }
 
-/* 导航激活态霓虹 */
+/* 导航激活态 */
 .nav-link.active {
   color: var(--primary);
   border-bottom-color: var(--accent-3);
-  box-shadow: inset 0 -2px 10px -4px rgba(255, 43, 214, 0.7);
+  box-shadow: inset 0 -2px 8px -4px rgba(224, 138, 60, 0.5);
 }
-.nav-link:hover { color: var(--primary-light); }
+.nav-link:hover { color: var(--primary-dark); }
 
-/* GIS 定位框霓虹 */
-.gis-corner { border-color: rgba(0, 229, 255, 0.6) !important; box-shadow: 0 0 10px rgba(0, 229, 255, 0.4); }
-.reticle-dot { background: var(--accent-3); box-shadow: 0 0 10px var(--accent-3); }
-.hud-coord, .hud-compass { color: var(--primary-light); }
-.scale-bar .bar { background: linear-gradient(90deg, #00e5ff, #ff2bd6); }
-.compass circle { stroke: rgba(0, 229, 255, 0.7); }
+/* GIS 定位框 */
+.gis-corner { border-color: rgba(47, 158, 107, 0.6) !important; box-shadow: 0 0 8px rgba(47, 158, 107, 0.35); }
+.reticle-dot { background: var(--accent-3); box-shadow: 0 0 8px var(--accent-3); }
+.hud-coord, .hud-compass { color: var(--primary-dark); }
+.scale-bar .bar { background: linear-gradient(90deg, #2f9e6b, #4a90d9); }
+.compass circle { stroke: rgba(47, 158, 107, 0.7); }
 
 .cluster-controls {
-  background: linear-gradient(135deg, rgba(14, 20, 40, 0.92), rgba(19, 26, 58, 0.92));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(243, 247, 241, 0.95));
   border: 1px solid var(--gis-border);
-  box-shadow: var(--shadow-md), inset 0 0 30px -18px rgba(177, 75, 255, 0.5);
+  box-shadow: var(--shadow-md);
 }
-.page-header h2 { color: var(--text); text-shadow: 0 0 16px rgba(0, 229, 255, 0.35); }
+.page-header h2 { color: var(--text); text-shadow: none; }
 
 /* ===================== POI 语义划分 UI ===================== */
 .divide-tabs {
@@ -1174,8 +1174,8 @@ html { scroll-behavior: smooth; }
 }
 .divide-tab:hover { color: var(--text); }
 .divide-tab.active {
-  color: #04121a; font-weight: 700;
-  background: linear-gradient(135deg, #00e5ff, #b14bff);
+  color: #ffffff; font-weight: 700;
+  background: linear-gradient(135deg, #2f9e6b, #4a90d9);
   box-shadow: var(--glow-cyan);
 }
 
@@ -1185,7 +1185,7 @@ html { scroll-behavior: smooth; }
   display: flex; align-items: center; gap: .45rem; font-size: .82rem; color: var(--text-secondary);
   padding: .3rem .7rem; border: 1px solid var(--gis-border); border-radius: 999px; background: var(--gis-surface);
 }
-.poi-dot { width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
+.poi-dot { width: 12px; height: 12px; border-radius: 50%; }
 
 /* POI 统计卡 */
 .poi-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .8rem; margin: 1rem 0; }
@@ -1195,7 +1195,6 @@ html { scroll-behavior: smooth; }
 }
 .poi-stat::before {
   content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--c);
-  box-shadow: 0 0 12px var(--c);
 }
 .poi-stat .v { font-family: var(--mono); font-size: 1.5rem; font-weight: 800; color: var(--text); }
 .poi-stat .l { font-size: .78rem; color: var(--text-secondary); margin-top: .2rem; }
@@ -1210,15 +1209,15 @@ html { scroll-behavior: smooth; }
 .poi-rcard .rc-head { display: flex; align-items: center; justify-content: space-between; }
 .poi-rcard .rc-name { font-weight: 700; color: var(--text); font-size: .9rem; }
 .poi-rcard .rc-tag {
-  font-size: .68rem; font-weight: 700; color: #04121a; padding: .1rem .5rem; border-radius: 999px; background: var(--c);
+  font-size: .68rem; font-weight: 700; color: #ffffff; padding: .1rem .5rem; border-radius: 999px; background: var(--c);
 }
 .poi-rcard .rc-weight { font-size: .78rem; color: var(--text-secondary); margin-top: .35rem; font-family: var(--mono); }
-.poi-rcard .rc-bar { height: 6px; background: rgba(255,255,255,.06); border-radius: 999px; margin-top: .4rem; overflow: hidden; }
-.poi-rcard .rc-fill { height: 100%; background: var(--c); box-shadow: 0 0 8px var(--c); }
+.poi-rcard .rc-bar { height: 6px; background: rgba(40, 60, 40, .07); border-radius: 999px; margin-top: .4rem; overflow: hidden; }
+.poi-rcard .rc-fill { height: 100%; background: var(--c); }
 
 .poi-hint {
   font-size: .82rem; color: var(--text-secondary); line-height: 1.6;
-  background: rgba(177, 75, 255, 0.07); border: 1px solid rgba(177, 75, 255, 0.25);
+  background: rgba(47, 158, 107, 0.07); border: 1px solid rgba(47, 158, 107, 0.25);
   border-radius: var(--radius-sm); padding: .7rem .9rem; margin-bottom: 1rem;
 }
 .poi-ctrl { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: .5rem; }
@@ -1227,4 +1226,98 @@ html { scroll-behavior: smooth; }
 
 /* 地图图例分隔 */
 .legend-sep { width: 1px; align-self: stretch; background: var(--gis-border); margin: 0 .2rem; }
-.legend-dot { box-shadow: 0 0 8px currentColor; }
+.legend-dot { box-shadow: none; }
+
+/* ===================== 片区卡片（全局 UI 风格基准） =====================
+   浅色纸感底 + 自然彩色：左侧类型色带、圆角白卡、hover 抬升、状态徽章、中心点经纬度。
+   项目内其它卡片（统计卡 / 负载卡 / 指标卡）都沿用这套语言。                        */
+.region-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
+  gap: .8rem;
+}
+.region-card {
+  position: relative;
+  padding: .85rem .95rem .8rem;
+  border-radius: var(--radius);
+  background: var(--gis-surface-solid);
+  border: 1px solid var(--gis-border);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+.region-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--c);
+}
+.region-card::after {
+  content: ''; position: absolute; right: -28px; top: -28px; width: 92px; height: 92px;
+  border-radius: 50%; background: var(--c); opacity: .07; pointer-events: none;
+}
+.region-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--c);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+}
+.region-card.is-active { border-color: var(--c); outline: 2px solid var(--c); outline-offset: -2px; }
+.rc-top { display: flex; align-items: center; gap: .45rem; position: relative; z-index: 1; }
+.rc-icon {
+  width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center;
+  flex-shrink: 0;
+}
+.rc-title {
+  font-size: .92rem; font-weight: 700; color: var(--text); flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rc-badge { font-size: .68rem; font-weight: 700; padding: .12rem .5rem; border-radius: 999px; white-space: nowrap; }
+.rc-badge.ok   { background: rgba(76, 175, 114, .14); color: #2f7d52; }
+.rc-badge.warn { background: rgba(224, 167, 62, .16); color: #96631a; }
+.rc-badge.over { background: rgba(226, 96, 79, .14);  color: #b23c2c; }
+.rc-badge.low  { background: rgba(74, 144, 217, .14); color: #2c6fae; }
+
+.rc-stats {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: .55rem;
+  margin-top: .55rem; font-size: .78rem; color: var(--text-secondary); position: relative; z-index: 1;
+}
+.rc-stats b { font-family: var(--mono); font-size: .95rem; font-weight: 700; color: var(--text); }
+.rc-cap { margin-left: auto; font-size: .72rem; color: var(--text-muted); font-family: var(--mono); }
+.rc-bar {
+  height: 7px; border-radius: 999px; background: rgba(40, 60, 40, .08);
+  overflow: hidden; margin-top: .5rem; position: relative; z-index: 1;
+}
+.rc-bar i { display: block; height: 100%; min-width: 3px; border-radius: 999px; background: var(--c); transition: width .35s ease; }
+.rc-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+  margin-top: .45rem; font-size: .7rem; color: var(--text-muted);
+  font-family: var(--mono); position: relative; z-index: 1;
+}
+.rc-ratio { font-weight: 600; color: var(--text-secondary); }
+.rc-coord { opacity: .9; }
+.rc-mix {
+  display: flex; height: 4px; border-radius: 999px; overflow: hidden;
+  margin-top: .45rem; background: rgba(40, 60, 40, .06); position: relative; z-index: 1;
+}
+.rc-mix i { display: block; height: 100%; }
+
+/* chip 变体：紧凑场景（如弹窗、侧栏）沿用同一套自然色 */
+.region-chips { display: flex; flex-wrap: wrap; gap: .5rem; }
+.region-chip {
+  display: inline-flex; align-items: center; gap: .35rem;
+  background: var(--gis-surface-solid); border: 1px solid var(--gis-border);
+  padding: .3rem .65rem; border-radius: 999px; font-size: .8rem; color: var(--text-secondary);
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+.region-chip:hover { border-color: var(--c); transform: translateY(-1px); }
+.region-chip .rc-dot { width: 10px; height: 10px; border-radius: 3px; background: var(--c); flex-shrink: 0; }
+
+/* 其它卡片沿用片区卡片的语言 */
+.poi-stat, .load-card {
+  border-radius: var(--radius);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+.poi-stat:hover, .load-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(47, 158, 107, .4);
+}
+.cluster-results { border-radius: var(--radius); }

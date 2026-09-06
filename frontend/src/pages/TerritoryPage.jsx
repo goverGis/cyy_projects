@@ -2,45 +2,11 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import MetricPanel from '../components/MetricPanel'
 import BenchmarkTable from '../components/BenchmarkTable'
-import RegionLoadList from '../components/RegionLoadList'
+import RegionCardList, { POI_COLORS, POI_LABELS, regionColor, EVENT_COLORS } from '../components/RegionCardList'
 import BalanceReport from '../components/BalanceReport'
 
-const TYPE_COLORS = {
-  secondhand: '#667eea',
-  lostfound: '#ff4757',
-  emergency: '#f44336',
-  discussion: '#2ed573'
-}
-
-// POI 语义色（与后端 POI_META、index.css --poi-* 保持一致）
-const POI_COLORS = {
-  residential: '#00e676',
-  mall: '#ff9100',
-  medical: '#ff1744',
-  leisure: '#00b0ff',
-  education: '#d500f9'
-}
-const POI_LABELS = {
-  residential: '小区/住宅',
-  mall: '商场',
-  medical: '医疗',
-  leisure: '休闲',
-  education: '教育'
-}
-
-function regionColor(i, total) {
-  const hue = Math.round((i * 360) / Math.max(total, 1))
-  return `hsl(${hue}, 65%, 55%)`
-}
-
-// 负载率 → 片区配色（绿=轻载，黄=临界，红=过载）
-function loadColor(ratio) {
-  if (ratio == null) return '#5eead4'
-  if (ratio > 1.0) return '#f43f5e'   // 过载
-  if (ratio > 0.85) return '#fbbf24'  // 临界
-  if (ratio > 0.6) return '#f59e0b'   // 中载
-  return '#34d399'                      // 轻载
-}
+// 业务事件类型配色（自然色系，与片区卡片的构成条保持一致）
+const TYPE_COLORS = { ...EVENT_COLORS }
 
 // 抽稀阈值：视窗内点数超过该值 → 用聚合桶渲染（点抽稀），否则用明细点
 const THIN_THRESHOLD = 400
@@ -66,6 +32,7 @@ function TerritoryPage() {
   const [hud, setHud] = useState({ lat: 39.9042, lng: 116.4074, zoom: 11 })
   const [thinMode, setThinMode] = useState(false)
   const [detailTotal, setDetailTotal] = useState(0)
+  const [activeRegion, setActiveRegion] = useState(null)   // 清单 ↔ 地图联动高亮
   const [view3D, setView3D] = useState(false)
   const view3DRef = useRef(false)
   const [appliedName, setAppliedName] = useState(null)   // 来自参数市场的应用方案名
@@ -85,6 +52,15 @@ function TerritoryPage() {
   const [tsIndex, setTsIndex] = useState(0)
   const [playing, setPlaying] = useState(false)
   const playTimer = useRef(null)
+
+  // 点击片区卡片 → 地图飞到该片区中心并高亮（清单 ↔ 地图联动）
+  const focusRegion = (id) => {
+    setActiveRegion(id)
+    const list = mode === 'poi' ? poiResult?.regions : result?.regions
+    const r = (list || []).find(x => x.region_id === id)
+    const map = mapInstance.current
+    if (map && r && r.centroid) map.setZoomAndCenter(14, [r.centroid[0], r.centroid[1]])
+  }
 
   // 渲染片区 Voronoi 多边形（与抽稀无关，始终全量）
   // is3D=true 时按业务量权重拉伸成 3D 柱体（高度=权重，直观看出哪片过载）
@@ -209,7 +185,7 @@ function TerritoryPage() {
       cnt.buckets.forEach(bk => {
         const r = 6 + Math.sqrt(bk.count) * 2.2
         const dom = Object.entries(bk.types || {}).sort((a, b) => b[1] - a[1])[0]
-        const c = TYPE_COLORS[dom ? dom[0] : 'secondhand'] || '#00e5ff'
+        const c = TYPE_COLORS[dom ? dom[0] : 'secondhand'] || '#4a90d9'
         const cm = new window.AMap.CircleMarker({
           center: [bk.cx, bk.cy], radius: r,
           strokeColor: c, strokeOpacity: 0.9, strokeWeight: 1,
@@ -243,7 +219,7 @@ function TerritoryPage() {
   useEffect(() => {
     if (!window.AMap || mapInstance.current) return
     const map = new window.AMap.Map(mapRef.current, {
-      zoom: 11, center: [116.4074, 39.9042], viewMode: '3D', pitch: 0, mapStyle: 'amap://styles/dark'
+      zoom: 11, center: [116.4074, 39.9042], viewMode: '3D', pitch: 0, mapStyle: 'amap://styles/fresh'
     })
     mapInstance.current = map
     setMapReady(true)
@@ -662,22 +638,22 @@ function TerritoryPage() {
             <div className="bar" />
           </div>
           <svg className="compass" viewBox="0 0 48 48" fill="none">
-            <circle cx="24" cy="24" r="21" stroke="rgba(94,234,212,0.7)" strokeWidth="1.5" />
-            <polygon points="24,5 29,24 24,21 19,24" fill="#f43f5e" />
-            <polygon points="24,43 19,24 24,27 29,24" fill="#5eead4" />
-            <text x="24" y="15" textAnchor="middle" fontSize="8" fill="#e6f1ff" fontFamily="monospace">N</text>
+            <circle cx="24" cy="24" r="21" stroke="rgba(47,158,107,0.7)" strokeWidth="1.5" />
+            <polygon points="24,5 29,24 24,21 19,24" fill="#e2604f" />
+            <polygon points="24,43 19,24 24,27 29,24" fill="#8a978a" />
+            <text x="24" y="15" textAnchor="middle" fontSize="8" fill="#243024" fontFamily="monospace">N</text>
           </svg>
         </div>
 
         {result && (
           <div className="map-overlay-badge" style={{
-            position: 'absolute', top: 12, left: 12, background: 'rgba(6,16,29,.86)',
-            border: '1px solid rgba(45,212,191,.4)', color: '#e6f1ff',
-            padding: '.45rem .75rem', borderRadius: 6, fontSize: '.78rem', boxShadow: '0 2px 8px rgba(0,0,0,.4)',
+            position: 'absolute', top: 12, left: 12, background: 'rgba(255,255,255,.9)',
+            border: '1px solid var(--gis-border)', color: 'var(--text-secondary)',
+            padding: '.45rem .75rem', borderRadius: 8, fontSize: '.78rem', boxShadow: 'var(--shadow-sm)',
             fontFamily: 'var(--mono)', zIndex: 7
           }}>
             地图点层：{thinMode ? '🔵 抽稀聚合视图' : `🔴 明细视图（视窗 ${detailTotal} 点，分页渲染）`}
-            {view3D && <div style={{ marginTop: '.3rem', color: '#5eead4' }}>🧊 3D 柱体高度 = 业务量权重（越高=负载越重）</div>}
+            {view3D && <div style={{ marginTop: '.3rem', color: 'var(--primary)' }}>🧊 3D 柱体高度 = 业务量权重（越高=负载越重）</div>}
           </div>
         )}
       </div>
@@ -685,7 +661,7 @@ function TerritoryPage() {
       {result && mode === 'capacity' && (
         <div className="cluster-results">
           <h3>片区负载清单（共 {result.regions.length} 个）</h3>
-          <RegionLoadList regions={result.regions} />
+          <RegionCardList regions={result.regions} onClick={focusRegion} activeId={activeRegion} />
         </div>
       )}
 
@@ -713,18 +689,7 @@ function TerritoryPage() {
 
           <div className="cluster-results">
             <h3>语义片区清单（共 {poiResult.regions.length} 个）</h3>
-            <div className="poi-region-list">
-              {poiResult.regions.map(r => (
-                <div className="poi-rcard" key={r.region_id} style={{ '--c': POI_COLORS[r.poi_type] }}>
-                  <div className="rc-head">
-                    <span className="rc-name">{POI_LABELS[r.poi_type]} · 片区{r.region_id + 1}</span>
-                    <span className="rc-tag">{r.point_count} 点</span>
-                  </div>
-                  <div className="rc-weight">权重 {r.weight}</div>
-                  <div className="rc-bar"><div className="rc-fill" style={{ width: `${Math.min(100, (r.weight / 100) * 100)}%` }} /></div>
-                </div>
-              ))}
-            </div>
+            <RegionCardList regions={poiResult.regions} onClick={focusRegion} activeId={activeRegion} />
           </div>
         </>
       )}
