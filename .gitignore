@@ -46,3 +46,4 @@ tools/data/
 _agg.json
 _agg2.json
 _items2.json
+.coverage
