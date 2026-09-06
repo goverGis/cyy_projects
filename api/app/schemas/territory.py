@@ -135,3 +135,52 @@ class PoiDivideResponse(BaseModel):
     balanced: bool = False
     capacity: float | None = None
     unit_count: int = 0
+
+
+# ========== What-if 方案推演（P0-2：闭环最后一公里）==========
+
+class SimulateAction(BaseModel):
+    type: str = Field(..., description="'split' 拆分片区 | 'merge' 合并到目标片区 | 'add_facility' 该片新增服务点(提升容量)")
+    region_id: int = Field(..., description="作用对象片区 id（与当前划分结果的 region_id 对齐）")
+    target_region_id: int | None = Field(default=None, description="merge 时的目标片区 id")
+    capacity_multiplier: float = Field(default=1.5, gt=0, description="add_facility 后该片容量倍率（默认 1.5）")
+
+
+class SimulateRequest(BaseModel):
+    k: int = Field(default=10, ge=2, le=200, description="基线片区数（与当前划分一致）")
+    lam: float = Field(default=2.0, gt=0)
+    mu: float = Field(default=0.1, ge=0)
+    seed: int = Field(default=42)
+    source: str = Field(default="auto")
+    type_filter: list[str] | None = None
+    time_window: dict | None = None
+    actions: list[SimulateAction] = Field(..., min_length=1, description="要推演的动作序列")
+
+
+class SimulateRegionOut(BaseModel):
+    region_id: int
+    weight: float
+    point_count: int
+    centroid: list[float]
+    load_ratio: float | None = None
+    overload: bool = False
+    capacity: float | None = None
+    suggested_action: str | None = None
+    polygon: Any | None = None
+    changed: bool = False   # 是否受本次推演动作影响
+
+
+class SimulateSide(BaseModel):
+    metrics: dict
+    regions: list[SimulateRegionOut]
+    capacity: float | None = None
+
+
+class SimulateResponse(BaseModel):
+    before: SimulateSide
+    after: SimulateSide
+    deltas: dict        # 关键指标 before→after 的变化（含 pct）
+    verdict: str        # improved | worsened | mixed | unchanged
+    before_geojson: dict
+    after_geojson: dict
+    source: str = "database"

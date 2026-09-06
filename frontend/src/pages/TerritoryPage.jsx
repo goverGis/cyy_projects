@@ -47,6 +47,12 @@ function TerritoryPage() {
   const view3DRef = useRef(false)
   const [appliedName, setAppliedName] = useState(null)   // 来自参数市场的应用方案名
 
+  // 方案推演（What-if，P0-2）：把"建议拆分"变成"照做能好多少"
+  const [simActions, setSimActions] = useState([])       // 待推演动作序列
+  const [simResult, setSimResult] = useState(null)        // 推演前后对比结果
+  const [simView, setSimView] = useState('before')        // 地图显示 推演前 / 推演后
+  const [simDraft, setSimDraft] = useState({ type: 'split', region_id: 0, target_region_id: 1, capacity_multiplier: 1.5 })
+
   // POI 语义划分模式（赛博霓虹新功能）
   const [mode, setMode] = useState('capacity')           // 'capacity' | 'poi'
   const [poiResult, setPoiResult] = useState(null)
@@ -169,6 +175,76 @@ function TerritoryPage() {
     try {
       map.setFitView(regionLayerRef.current.filter(o => o instanceof window.AMap.Polygon))
     } catch (_) {}
+  }
+
+  // 方案推演：按负载率着色渲染「前 / 后」片区（复用 loadColor）
+  const renderSimPartition = (geojson) => {
+    const map = mapInstance.current
+    if (!map || !geojson) return
+    regionLayerRef.current.forEach(o => o.setMap && o.setMap(null))
+    regionLayerRef.current = []
+    clearPointLayer()
+    geojson.features.forEach(f => {
+      if (!f.geometry || !f.geometry.coordinates || !f.geometry.coordinates[0]) return
+      const ring = f.geometry.coordinates[0]
+      const path = ring.map(([lng, lat]) => [lng, lat])
+      const color = loadColor(f.properties.load_ratio)
+      const poly = new window.AMap.Polygon({
+        path, strokeColor: color, strokeWeight: 2, strokeOpacity: 0.9,
+        fillColor: color, fillOpacity: 0.2,
+      })
+      poly.setMap(map)
+      regionLayerRef.current.push(poly)
+      const [lng, lat] = f.properties.centroid
+      const text = new window.AMap.Text({
+        text: `片区${f.properties.region_id + 1}\n负载 ${Math.round((f.properties.load_ratio || 0) * 100)}%${f.properties.overload ? ' ⚠' : ''}`,
+        position: [lng, lat], anchor: 'center',
+        style: {
+          background: 'rgba(255,255,255,.92)', border: `1px solid ${color}`,
+          'border-radius': '4px', padding: '2px 6px', 'font-size': '11px',
+          color: '#1f2937', 'white-space': 'pre', 'font-weight': 600
+        }
+      })
+      text.setMap(map)
+      regionLayerRef.current.push(text)
+    })
+    try {
+      map.setFitView(regionLayerRef.current.filter(o => o instanceof window.AMap.Polygon))
+    } catch (_) {}
+    refreshPointLayer()
+  }
+
+  // 推演动作 → 人类可读标签
+  const actionLabel = (a) => {
+    if (a.type === 'split') return `拆分 片区${a.region_id + 1}`
+    if (a.type === 'merge') return `合并 片区${a.region_id + 1} → 片区${a.target_region_id + 1}`
+    if (a.type === 'add_facility') return `片区${a.region_id + 1} 新增服务点(×${a.capacity_multiplier})`
+    return ''
+  }
+  const verdictText = (v) => ({ improved: '整体改善', worsened: '整体变差', mixed: '有得有失', unchanged: '基本无变化' }[v] || v)
+
+  // 运行 What-if 推演
+  const handleSimulate = async () => {
+    if (!simActions.length) return
+    setLoading(true)
+    try {
+      const res = await fetch('/api/territory/simulate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          k: params.k, lam: params.lam, mu: params.mu, seed: params.seed, source: 'auto',
+          actions: simActions,
+        })
+      })
+      const data = await res.json()
+      setSimResult(data)
+      setSimView('after')
+      renderSimPartition(data.after_geojson)
+    } catch (e) {
+      console.error('推演失败', e)
+      alert('推演失败，请确认后端（FastAPI :8000）已启动且参数与当前划分一致')
+    } finally {
+      setLoading(false)
+    }
   }
 
   // 3D 负载视图开关：仅切换地图 pitch + 重渲片区层高度（不重建地图）
@@ -332,6 +408,8 @@ function TerritoryPage() {
       localStorage.removeItem('applied_scheme_id')
     }
     setLoading(true)
+    setSimResult(null)      // 重新划分后片区 id 变化，旧推演失效
+    setSimActions([])
     try {
       const res = await fetch('/api/territory/divide', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -649,6 +727,89 @@ function TerritoryPage() {
         <div className="cluster-results" style={{ marginBottom: '1.5rem' }}>
           <h3>对比实验（K={params.k}）</h3>
           <BenchmarkTable rows={bench} k={params.k} />
+        </div>
+      )}
+
+      {/* 方案推演（What-if，P0-2）：把"建议"变成"照做能好多少" */}
+      {result && mode === 'capacity' && (
+        <div className="sim-panel">
+          <h3>🧪 方案推演（What-if）</h3>
+          <p className="sim-hint">
+            给片区加一个动作，看推演前后指标对比——把"建议拆分片区 X"变成"拆分后 CV 0.41→0.x、超载 4→3"。
+          </p>
+          <div className="sim-add">
+            <select value={simDraft.type} onChange={e => setSimDraft({ ...simDraft, type: e.target.value })}>
+              <option value="split">拆分片区</option>
+              <option value="merge">合并到…</option>
+              <option value="add_facility">新增服务点（提容）</option>
+            </select>
+            <select value={simDraft.region_id} onChange={e => setSimDraft({ ...simDraft, region_id: parseInt(e.target.value) })}>
+              {result.regions.map(r => (
+                <option key={r.region_id} value={r.region_id}>
+                  片区{r.region_id + 1}（负载{Math.round((r.load_ratio || 0) * 100)}%{r.overload ? ' 超载' : ''}）
+                </option>
+              ))}
+            </select>
+            {simDraft.type === 'merge' && (
+              <select value={simDraft.target_region_id} onChange={e => setSimDraft({ ...simDraft, target_region_id: parseInt(e.target.value) })}>
+                {result.regions.filter(r => r.region_id !== simDraft.region_id).map(r => (
+                  <option key={r.region_id} value={r.region_id}>→ 片区{r.region_id + 1}</option>
+                ))}
+              </select>
+            )}
+            {simDraft.type === 'add_facility' && (
+              <label className="sim-mult">容量×{' '}
+                <input type="number" min="1.1" max="5" step="0.1" value={simDraft.capacity_multiplier}
+                  onChange={e => setSimDraft({ ...simDraft, capacity_multiplier: parseFloat(e.target.value) || 1.5 })} />
+              </label>
+            )}
+            <button className="btn btn-outline" onClick={() => setSimActions([...simActions, { ...simDraft }])}>+ 加动作</button>
+          </div>
+
+          {simActions.length > 0 && (
+            <div className="sim-actions">
+              {simActions.map((a, i) => (
+                <span key={i} className="sim-chip">
+                  {actionLabel(a)}
+                  <button onClick={() => setSimActions(simActions.filter((_, j) => j !== i))} aria-label="删除">×</button>
+                </span>
+              ))}
+              <button className="btn btn-primary" onClick={handleSimulate} disabled={loading} style={{ marginLeft: 'auto' }}>
+                {loading ? '推演中…' : '▶ 运行推演'}
+              </button>
+            </div>
+          )}
+
+          {simResult && (
+            <div className="sim-result">
+              <div className={`sim-verdict ${simResult.verdict}`}>
+                推演结论：{verdictText(simResult.verdict)}（{simResult.before.metrics.region_count}→{simResult.after.metrics.region_count} 个片区）
+              </div>
+              <div className="sim-deltas">
+                {[
+                  ['cv_weight', '均衡度 CV', true],
+                  ['overload_count', '超载片区数', true],
+                  ['max_load_ratio', '最大负载率', true],
+                  ['mean_radius_m', '平均服务半径', true],
+                ].map(([key, label]) => {
+                  const d = simResult.deltas[key]
+                  const dir = d.improved ? 'down' : (d.pct !== 0 ? 'up' : 'flat')
+                  return (
+                    <div key={key} className="sim-delta">
+                      <div className="sd-label">{label}</div>
+                      <div className="sd-val">{d.before} → <b className={`sd-${dir}`}>{d.after}</b></div>
+                      <div className={`sd-pct sd-${dir}`}>{d.pct > 0 ? '▲' : d.pct < 0 ? '▼' : '—'} {Math.abs(d.pct)}%</div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="sim-viewtoggle">
+                <span>地图查看：</span>
+                <button className={simView === 'before' ? 'active' : ''} onClick={() => { setSimView('before'); renderSimPartition(simResult.before_geojson) }}>推演前</button>
+                <button className={simView === 'after' ? 'active' : ''} onClick={() => { setSimView('after'); renderSimPartition(simResult.after_geojson) }}>推演后</button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

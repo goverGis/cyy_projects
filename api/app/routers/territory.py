@@ -9,6 +9,11 @@ from shapely.geometry import mapping, shape as shapely_shape, Point
 from sqlalchemy import func, select, text
 
 from app.algorithms import divide, random_divide, grid_divide, kmeans_divide, poi_divide
+from app.algorithms.territory import (
+    _centroids_of,
+    _voronoi_polys,
+    haversine_m,
+)
 from app.core.database import SessionLocal
 from app.models.beijing import BeijingDistrict  # noqa: F401  确保 create_all 注册该表
 from app.models.event import Event
@@ -21,6 +26,11 @@ from app.schemas.territory import (
     PoiDivideResponse,
     PoiRegionOut,
     RegionOut,
+    SimulateAction,
+    SimulateRequest,
+    SimulateResponse,
+    SimulateRegionOut,
+    SimulateSide,
 )
 
 router = APIRouter(prefix="/api/territory", tags=["territory"])
@@ -540,3 +550,212 @@ def poi_types_endpoint():
         "poi_types": counts,
         "meta": POI_META,
     }
+
+
+# ========== What-if 方案推演（P0-2）==========
+
+def _partition_metrics(xy, w, assign, capacity, cap_overrides=None):
+    """从「点→片区」分配计算片区级指标，口径与 /divide 完全一致。
+
+    - capacity：基线容量 = 总权重 / k * 1.2（与 _build_divide_result 同公式）
+    - cap_overrides：{region_id: 倍率}，用于 add_facility（提升某片区容量）
+    返回带 weights/cents/caps/load/overload 的明细 dict，便于构造响应与 GeoJSON。
+    """
+    assign = np.asarray(assign)
+    uniq = np.unique(assign)
+    remap = {int(old): i for i, old in enumerate(uniq)}
+    a2 = np.array([remap[int(x)] for x in assign])
+    R = len(uniq)
+    weights = np.array([float(w[a2 == r].sum()) for r in range(R)])
+    cents = np.array([xy[a2 == r].mean(axis=0) for r in range(R)])
+    caps = np.full(R, float(capacity))
+    if cap_overrides:
+        for rid, mult in cap_overrides.items():
+            if 0 <= rid < R:
+                caps[rid] *= float(mult)
+    load = np.where(caps > 0, weights / caps, 0.0)
+    overload = load > 1.0
+    cv = float(weights.std() / (weights.mean() + 1e-9)) if weights.mean() > 0 else 0.0
+    radii = np.array([haversine_m(xy[i], cents[a2[i]]) for i in range(len(w))])
+    return {
+        "region_count": R,
+        "cv_weight": round(cv, 4),
+        "overload_count": int(overload.sum()),
+        "max_load_ratio": round(float(load.max()), 4),
+        "mean_load_ratio": round(float(load.mean()), 4),
+        "mean_radius_m": round(float(radii.mean()), 1),
+        "max_radius_m": round(float(radii.max()), 1),
+        "weights": weights,
+        "cents": cents,
+        "caps": caps,
+        "load": load,
+        "overload": overload,
+    }
+
+
+def _side_to_geojson(xy, w, assign, m, cap_overrides, changed_ids):
+    """根据分配构造 FeatureCollection（Voronoi 边界 + 负载/超载属性）。"""
+    uniq = np.unique(assign)
+    remap = {int(old): i for i, old in enumerate(uniq)}
+    a2 = np.array([remap[int(x)] for x in assign])
+    R = len(uniq)
+    cents = np.array([xy[a2 == r].mean(axis=0) for r in range(R)])
+    mean_lat = float(xy[:, 1].mean())
+    polys = _voronoi_polys(cents, xy, mean_lat)
+    features = []
+    for r in range(R):
+        msk = a2 == r
+        weight = float(w[msk].sum())
+        centroid = [float(cents[r][0]), float(cents[r][1])]
+        cap = float(m["caps"][r])
+        lr = m["load"][r]
+        ov = bool(m["overload"][r])
+        geo = mapping(polys[r]) if polys[r] is not None and not polys[r].is_empty else None
+        suggested = "拆分" if ov and lr > 1.3 else ("新增服务点" if ov else ("合并" if lr < 0.5 else "OK"))
+        features.append({
+            "type": "Feature",
+            "geometry": geo,
+            "properties": {
+                "region_id": r, "weight": round(weight, 2), "point_count": int(msk.sum()),
+                "centroid": centroid, "load_ratio": round(float(lr), 4),
+                "overload": ov, "capacity": round(cap, 2), "suggested_action": suggested,
+                "changed": r in changed_ids,
+            },
+        })
+    return {"type": "FeatureCollection", "features": features}
+
+
+def _side_regions(m, changed_ids):
+    regions = []
+    for r in range(m["region_count"]):
+        lr = float(m["load"][r])
+        ov = bool(m["overload"][r])
+        suggested = "拆分" if ov and lr > 1.3 else ("新增服务点" if ov else ("合并" if lr < 0.5 else "OK"))
+        regions.append(SimulateRegionOut(
+            region_id=r,
+            weight=round(float(m["weights"][r]), 2),
+            point_count=0,  # 真实点数由 _fill_point_count 补算
+            centroid=[float(m["cents"][r][0]), float(m["cents"][r][1])],
+            load_ratio=round(lr, 4),
+            overload=ov,
+            capacity=round(float(m["caps"][r]), 2),
+            suggested_action=suggested,
+            changed=r in changed_ids,
+        ))
+    return regions
+
+
+@router.post("/simulate", response_model=SimulateResponse)
+def simulate_endpoint(req: SimulateRequest):
+    """What-if 方案推演：给定一组动作（拆分/合并/加服务点），返回推演前后指标对比。
+
+    直接复用当前数据源跑一次基线容量约束划分作为「前」，再对分配施加动作得到「后」，
+    指标口径与 /divide 完全一致（capacity = 总权重 / k * 1.2）。
+    闭环价值：把「建议拆分片区 X」变成「拆分后 CV 0.28→0.19、超载 3→0」。
+    """
+    # 加载点集（复用 /divide 的来源逻辑）
+    xy, w, types, times, source = _load_points_with_meta(
+        DivideRequest(
+            k=req.k, lam=req.lam, mu=req.mu, seed=req.seed,
+            type_filter=req.type_filter, source=req.source, time_window=req.time_window,
+        )
+    )
+    if len(xy) < req.k:
+        raise HTTPException(status_code=400, detail=f"点集数量 {len(xy)} 小于片区数 {req.k}")
+
+    base = divide(xy, w, req.k, lam=req.lam, mu=req.mu, seed=req.seed)
+    assign = base.assignment.copy()
+    capacity = float(w.sum()) / req.k * 1.2 if req.k > 0 else 0.0
+
+    before_m = _partition_metrics(xy, w, assign, capacity)
+    changed_ids = set()
+    cap_overrides = {}
+    next_id = int(assign.max()) + 1
+
+    for act in req.actions:
+        r = act.region_id
+        if act.type == "split":
+            mask = assign == r
+            idx = np.where(mask)[0]
+            if len(idx) >= 2:
+                sub = divide(xy[idx], w[idx], 2, lam=req.lam, mu=req.mu, seed=req.seed + r)
+                sub_a = np.asarray(sub.assignment)
+                assign[idx[sub_a == 0]] = r
+                assign[idx[sub_a == 1]] = next_id
+                next_id += 1
+                changed_ids.add(r)
+            else:
+                changed_ids.add(r)  # 标记但无法拆
+        elif act.type == "merge":
+            t = act.target_region_id
+            if t is not None and t != r:
+                assign[assign == r] = t
+                changed_ids.add(t)
+                changed_ids.add(r)
+        elif act.type == "add_facility":
+            cap_overrides[r] = act.capacity_multiplier
+            changed_ids.add(r)
+
+    after_m = _partition_metrics(xy, w, assign, capacity, cap_overrides)
+
+    # —— 真实点数（_partition_metrics 没存点数，这里补算）——
+    def _fill_point_count(side_m, side_assign, regions):
+        uniq = np.unique(side_assign)
+        remap = {int(o): i for i, o in enumerate(uniq)}
+        a2 = np.array([remap[int(x)] for x in side_assign])
+        for r in range(len(regions)):
+            regions[r].point_count = int((a2 == r).sum())
+        return regions
+
+    before_regions = _fill_point_count(before_m, base.assignment, _side_regions(before_m, set()))
+    after_regions = _fill_point_count(after_m, assign, _side_regions(after_m, changed_ids))
+
+    before_geo = _side_to_geojson(xy, w, base.assignment, before_m, {}, set())
+    after_geo = _side_to_geojson(xy, w, assign, after_m, cap_overrides, changed_ids)
+
+    # —— 关键指标前后对比 ——
+    def _delta(key, better_lower=True):
+        b = before_m[key]
+        a = after_m[key]
+        pct = (a - b) / b * 100 if b not in (0, 0.0) else (0.0 if a == b else 100.0)
+        improved = (a < b) if better_lower else (a > b)
+        return {"before": b, "after": a, "pct": round(pct, 1), "improved": bool(improved)}
+
+    deltas = {
+        "cv_weight": _delta("cv_weight", better_lower=True),
+        "overload_count": _delta("overload_count", better_lower=True),
+        "max_load_ratio": _delta("max_load_ratio", better_lower=True),
+        "mean_radius_m": _delta("mean_radius_m", better_lower=True),
+        "max_radius_m": _delta("max_radius_m", better_lower=True),
+        "region_count": {"before": before_m["region_count"], "after": after_m["region_count"]},
+    }
+
+    # 综合判定
+    improved_cnt = sum(1 for kk in ("cv_weight", "overload_count", "max_load_ratio", "mean_radius_m", "max_radius_m")
+                       if deltas[kk]["improved"])
+    worsened_cnt = sum(1 for kk in ("cv_weight", "overload_count", "max_load_ratio", "mean_radius_m", "max_radius_m")
+                       if deltas[kk]["pct"] != 0 and not deltas[kk]["improved"])
+    if improved_cnt > worsened_cnt:
+        verdict = "improved"
+    elif worsened_cnt > improved_cnt:
+        verdict = "worsened"
+    elif improved_cnt == worsened_cnt and improved_cnt > 0:
+        verdict = "mixed"
+    else:
+        verdict = "unchanged"
+
+    # metrics 只对外暴露标量（numpy 数组留在内部 m 里，不进响应）
+    METRIC_KEYS = ["region_count", "cv_weight", "overload_count", "max_load_ratio",
+                   "mean_load_ratio", "mean_radius_m", "max_radius_m"]
+    before_metrics = {k: before_m[k] for k in METRIC_KEYS}
+    after_metrics = {k: after_m[k] for k in METRIC_KEYS}
+
+    return SimulateResponse(
+        before=SimulateSide(metrics=before_metrics, regions=before_regions, capacity=round(capacity, 2)),
+        after=SimulateSide(metrics=after_metrics, regions=after_regions, capacity=round(capacity, 2)),
+        deltas=deltas,
+        verdict=verdict,
+        before_geojson=before_geo,
+        after_geojson=after_geo,
+        source=source,
+    )
