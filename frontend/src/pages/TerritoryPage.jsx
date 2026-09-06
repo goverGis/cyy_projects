@@ -12,6 +12,22 @@ const TYPE_COLORS = {
   discussion: '#2ed573'
 }
 
+// POI 语义色（与后端 POI_META、index.css --poi-* 保持一致）
+const POI_COLORS = {
+  residential: '#00e676',
+  mall: '#ff9100',
+  medical: '#ff1744',
+  leisure: '#00b0ff',
+  education: '#d500f9'
+}
+const POI_LABELS = {
+  residential: '小区/住宅',
+  mall: '商场',
+  medical: '医疗',
+  leisure: '休闲',
+  education: '教育'
+}
+
 function regionColor(i, total) {
   const hue = Math.round((i * 360) / Math.max(total, 1))
   return `hsl(${hue}, 65%, 55%)`
@@ -53,6 +69,16 @@ function TerritoryPage() {
   const [view3D, setView3D] = useState(false)
   const view3DRef = useRef(false)
   const [appliedName, setAppliedName] = useState(null)   // 来自参数市场的应用方案名
+
+  // POI 语义划分模式（赛博霓虹新功能）
+  const [mode, setMode] = useState('capacity')           // 'capacity' | 'poi'
+  const [poiResult, setPoiResult] = useState(null)
+  const poiResultRef = useRef(null)
+  const [poiMeta, setPoiMeta] = useState(null)            // /poi-types 的 meta（标签/色）
+  const [eps, setEps] = useState({
+    residential: 700, mall: 600, medical: 450, leisure: 500, education: 500
+  })
+  const [poiCounts, setPoiCounts] = useState({})   // 各 POI 类型事件总数（来自 /poi-types）
 
   // 时间滑块（P0）：预取时间序列，拖动/播放直接渲染对应切片，无需每次打后端
   const [series, setSeries] = useState([])
@@ -114,6 +140,39 @@ function TerritoryPage() {
     } catch (_) {}
   }
 
+  // 渲染 POI 语义片区：每个片区按其 POI 类型的霓虹色填充，中心标注类型+点数
+  const renderPoiRegions = (data) => {
+    const map = mapInstance.current
+    if (!map) return
+    const feats = data.geojson.features
+    feats.forEach(f => {
+      const ring = f.geometry.coordinates[0]
+      const path = ring.map(([lng, lat]) => [lng, lat])
+      const color = f.properties.poi_color || POI_COLORS[f.properties.poi_type] || '#888'
+      const poly = new window.AMap.Polygon({
+        path, strokeColor: color, strokeWeight: 2, strokeOpacity: 0.95,
+        fillColor: color, fillOpacity: 0.22
+      })
+      poly.setMap(map)
+      regionLayerRef.current.push(poly)
+      const [lng, lat] = f.properties.centroid
+      const text = new window.AMap.Text({
+        text: `${f.properties.poi_label || f.properties.poi_type}\n${f.properties.point_count} 点`,
+        position: [lng, lat], anchor: 'center',
+        style: {
+          background: 'rgba(5,6,15,.82)', border: `1px solid ${color}`,
+          'border-radius': '4px', padding: '2px 6px', 'font-size': '11px',
+          color: '#eaf2ff', 'white-space': 'pre'
+        }
+      })
+      text.setMap(map)
+      regionLayerRef.current.push(text)
+    })
+    try {
+      map.setFitView(regionLayerRef.current.filter(o => o instanceof window.AMap.Polygon))
+    } catch (_) {}
+  }
+
   // 3D 负载视图开关：仅切换地图 pitch + 重渲片区层高度（不重建地图）
   const toggle3D = () => {
     const nv = !view3D
@@ -146,13 +205,15 @@ function TerritoryPage() {
     clearPointLayer()
 
     if (useThin) {
-      // 抽稀视图：聚合桶（DOM 标记数量级从数千降到几十）
+      // 抽稀视图：聚合桶（DOM 标记数量级从数千降到几十），按主导事件类型着色
       cnt.buckets.forEach(bk => {
         const r = 6 + Math.sqrt(bk.count) * 2.2
+        const dom = Object.entries(bk.types || {}).sort((a, b) => b[1] - a[1])[0]
+        const c = TYPE_COLORS[dom ? dom[0] : 'secondhand'] || '#00e5ff'
         const cm = new window.AMap.CircleMarker({
           center: [bk.cx, bk.cy], radius: r,
-          strokeColor: '#3742fa', strokeOpacity: 0.9, strokeWeight: 1,
-          fillColor: '#3742fa', fillOpacity: 0.45, bubble: true,
+          strokeColor: c, strokeOpacity: 0.9, strokeWeight: 1,
+          fillColor: c, fillOpacity: 0.45, bubble: true,
           extData: { count: bk.count, weight: bk.weight }
         })
         cm.setMap(map)
@@ -166,10 +227,11 @@ function TerritoryPage() {
       const data = await (await fetch(`/api/items?minlng=${minlng}&minlat=${minlat}&maxlng=${maxlng}&maxlat=${maxlat}&offset=0&limit=${PAGE}`)).json()
       setDetailTotal(data.total)
       ;(data.items || []).forEach(p => {
+        const c = POI_COLORS[p.poi_type] || TYPE_COLORS[p.type] || '#888'
         const cm = new window.AMap.CircleMarker({
           center: [p.longitude, p.latitude], radius: 3,
-          strokeColor: TYPE_COLORS[p.type] || '#888', strokeOpacity: 0.8, strokeWeight: 1,
-          fillColor: TYPE_COLORS[p.type] || '#888', fillOpacity: 0.7, bubble: true
+          strokeColor: c, strokeOpacity: 0.8, strokeWeight: 1,
+          fillColor: c, fillOpacity: 0.7, bubble: true
         })
         cm.setMap(map)
         pointLayerRef.current.push(cm)
@@ -192,7 +254,8 @@ function TerritoryPage() {
     map.on('move', updateHud)
     map.on('zoomend', updateHud)
     updateHud()
-    if (resultRef.current) renderRegions(resultRef.current, view3DRef.current)  // 应用方案可能先于地图就绪
+    if (poiResultRef.current) renderPoiRegions(poiResultRef.current)  // 应用方案可能先于地图就绪
+    else if (resultRef.current) renderRegions(resultRef.current, view3DRef.current)
     map.on('zoomend', () => refreshRef.current && refreshRef.current())
     return () => {
       if (playTimer.current) clearInterval(playTimer.current)
@@ -246,6 +309,23 @@ function TerritoryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // 挂载时获取各 POI 类型的事件总数（用于 POI 统计卡）
+  useEffect(() => {
+    fetch('/api/territory/poi-types')
+      .then(r => r.json())
+      .then(d => setPoiCounts(d.poi_types || {}))
+      .catch(() => {})
+  }, [])
+
+  // 分享链接：?mode=poi 直接以 POI 语义划分模式打开（可跨用户分享）
+  useEffect(() => {
+    if (searchParams.get('mode') === 'poi') {
+      setMode('poi')
+      handlePoiDivide()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const handleDivide = async (override) => {
     const p = override || params
     if (!override) {
@@ -278,6 +358,45 @@ function TerritoryPage() {
     } catch (e) {
       console.error('划分失败', e)
       alert('划分失败，请确认后端（FastAPI :8000）已启动')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 切换划分模式：清空地图图层后按需重渲
+  const switchMode = (m) => {
+    setMode(m)
+    regionLayerRef.current.forEach(o => o.setMap && o.setMap(null))
+    regionLayerRef.current = []
+    clearPointLayer()
+    if (m === 'capacity' && resultRef.current) {
+      renderRegions(resultRef.current, view3DRef.current)
+      refreshPointLayer()
+    } else if (m === 'poi' && poiResultRef.current) {
+      renderPoiRegions(poiResultRef.current)
+      refreshPointLayer()
+    }
+  }
+
+  // POI 语义划分：以小区为单元、邻近小区合并，再按商场/医疗/休闲/教育聚成片区
+  const handlePoiDivide = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/territory/poi-divide', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eps_by_type: eps })
+      })
+      const data = await res.json()
+      poiResultRef.current = data
+      setPoiResult(data)
+      regionLayerRef.current.forEach(o => o.setMap && o.setMap(null))
+      regionLayerRef.current = []
+      clearPointLayer()
+      renderPoiRegions(data)
+      await refreshPointLayer()
+    } catch (e) {
+      console.error('POI 划分失败', e)
+      alert('POI 划分失败，请确认后端（FastAPI :8000）已启动')
     } finally {
       setLoading(false)
     }
@@ -363,6 +482,17 @@ function TerritoryPage() {
         </p>
       </div>
 
+      <div className="divide-tabs">
+        <div
+          className={`divide-tab ${mode === 'capacity' ? 'active' : ''}`}
+          onClick={() => switchMode('capacity')}
+        >⚖ 容量约束划分</div>
+        <div
+          className={`divide-tab ${mode === 'poi' ? 'active' : ''}`}
+          onClick={() => { switchMode('poi'); if (!poiResultRef.current) handlePoiDivide() }}
+        >🗺 POI 语义划分</div>
+      </div>
+
       {appliedName && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '1rem',
@@ -386,7 +516,7 @@ function TerritoryPage() {
         </div>
       )}
 
-      <div className="cluster-controls">
+      {mode === 'capacity' && (<div className="cluster-controls">
         <div className="control-row">
           <div className="form-group">
             <label>片区数 K</label>
@@ -435,12 +565,38 @@ function TerritoryPage() {
               🗺 裁剪到北京行政区
             </label>
           </div>
-      </div>
+      </div>)}
 
-      {metrics && <MetricPanel metrics={metrics} />}
+      {/* POI 语义划分控制面板 */}
+      {mode === 'poi' && (
+        <div className="cluster-controls">
+          <div className="poi-hint">
+            🧩 <b>划分逻辑</b>：以「小区」为基本单元，邻近小区按 {eps.residential}m 半径合并为居住片区；
+            再依次将<b style={{ color: 'var(--poi-mall)' }}> 商场</b>、
+            <b style={{ color: 'var(--poi-medical)' }}> 医疗</b>、
+            <b style={{ color: 'var(--poi-leisure)' }}> 休闲</b>、
+            <b style={{ color: 'var(--poi-education)' }}> 教育</b> 按各自半径聚成独立语义片区。
+          </div>
+          <div className="poi-ctrl">
+            {Object.keys(POI_COLORS).map(t => (
+              <label key={t}>
+                <span className="poi-dot" style={{ color: POI_COLORS[t], background: POI_COLORS[t] }} />
+                {POI_LABELS[t]} {eps[t]}m
+                <input type="range" min="200" max="1200" step="50" value={eps[t]}
+                  onChange={e => setEps({ ...eps, [t]: parseInt(e.target.value) })} />
+              </label>
+            ))}
+            <button className="btn btn-primary" onClick={handlePoiDivide} disabled={loading} style={{ marginLeft: 'auto' }}>
+              {loading ? '计算中…' : '▶ 执行 POI 划分'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {metrics && mode === 'capacity' && <MetricPanel metrics={metrics} />}
 
       {/* 时间滑块（P0）：拖动/播放回放城市负载的时空演化 */}
-      {series.length > 1 && (
+      {series.length > 1 && mode === 'capacity' && (
         <div className="time-slider">
           <div className="ts-head">
             <span className="ts-title">⏱ 时间回放</span>
@@ -463,7 +619,7 @@ function TerritoryPage() {
         </div>
       )}
 
-      {result && result.balance_report && (
+      {result && result.balance_report && mode === 'capacity' && (
         <BalanceReport report={result.balance_report} recommendation={result.recommendation} />
       )}
 
@@ -478,7 +634,7 @@ function TerritoryPage() {
         </div>
       )}
 
-      {bench && (
+      {bench && mode === 'capacity' && (
         <div className="cluster-results" style={{ marginBottom: '1.5rem' }}>
           <h3>对比实验（K={params.k}）</h3>
           <BenchmarkTable rows={bench} k={params.k} />
@@ -526,11 +682,51 @@ function TerritoryPage() {
         )}
       </div>
 
-      {result && (
+      {result && mode === 'capacity' && (
         <div className="cluster-results">
           <h3>片区负载清单（共 {result.regions.length} 个）</h3>
           <RegionLoadList regions={result.regions} />
         </div>
+      )}
+
+      {/* POI 语义划分结果：统计卡 + 图例 + 按类型分组的片区清单 */}
+      {poiResult && mode === 'poi' && (
+        <>
+          <div className="poi-stats">
+            {Object.keys(POI_COLORS).map(t => (
+              <div className="poi-stat" key={t} style={{ '--c': POI_COLORS[t] }}>
+                <div className="v">{poiCounts[t] || 0}</div>
+                <div className="l">{POI_LABELS[t]}</div>
+                <div className="s">{(poiResult.by_type[t] || 0)} 个片区 · {poiResult.source === 'database' ? '数据库' : '文件'}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="poi-legend">
+            {Object.keys(POI_COLORS).map(t => (
+              <span className="poi-legend-item" key={t}>
+                <span className="poi-dot" style={{ color: POI_COLORS[t], background: POI_COLORS[t] }} />
+                {POI_LABELS[t]}
+              </span>
+            ))}
+          </div>
+
+          <div className="cluster-results">
+            <h3>语义片区清单（共 {poiResult.regions.length} 个）</h3>
+            <div className="poi-region-list">
+              {poiResult.regions.map(r => (
+                <div className="poi-rcard" key={r.region_id} style={{ '--c': POI_COLORS[r.poi_type] }}>
+                  <div className="rc-head">
+                    <span className="rc-name">{POI_LABELS[r.poi_type]} · 片区{r.region_id + 1}</span>
+                    <span className="rc-tag">{r.point_count} 点</span>
+                  </div>
+                  <div className="rc-weight">权重 {r.weight}</div>
+                  <div className="rc-bar"><div className="rc-fill" style={{ width: `${Math.min(100, (r.weight / 100) * 100)}%` }} /></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
       )}
     </div>
   )

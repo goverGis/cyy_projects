@@ -1,32 +1,43 @@
 :root {
-  /* ===== GIS 控制台配色（深色测绘风） ===== */
-  --gis-bg: #06101d;
-  --gis-bg-2: #0a1828;
-  --gis-surface: rgba(13, 28, 47, 0.92);
-  --gis-surface-solid: #0d1c2f;
-  --gis-surface-2: #11233a;
-  --gis-surface-3: #15304d;
-  --gis-border: #1e3a5f;
-  --gis-border-soft: #16293f;
-  --gis-grid: rgba(56, 189, 248, 0.06);
+  /* ===== 赛博霓虹配色（深色底 + 高饱和霓虹） ===== */
+  --gis-bg: #05060f;
+  --gis-bg-2: #0a0e1f;
+  --gis-surface: rgba(14, 20, 40, 0.9);
+  --gis-surface-solid: #0e1430;
+  --gis-surface-2: #131a3a;
+  --gis-surface-3: #1a234d;
+  --gis-border: #2a3a6b;
+  --gis-border-soft: #1a2444;
+  --gis-grid: rgba(120, 90, 255, 0.06);
 
-  --primary: #2dd4bf;          /* 测绘青 */
-  --primary-dark: #14b8a6;
-  --primary-light: #5eead4;
-  --secondary: #38bdf8;        /* 天蓝 */
-  --accent-3: #f59e0b;         /* 数据琥珀 */
-  --success: #34d399;
-  --warning: #fbbf24;
-  --danger: #f43f5e;
+  --primary: #00e5ff;          /* 霓虹青 */
+  --primary-dark: #00b8d4;
+  --primary-light: #6cf3ff;
+  --secondary: #b14bff;        /* 霓虹紫 */
+  --accent-3: #ff2bd6;         /* 霓虹品红 */
+  --success: #00e676;
+  --warning: #ffea00;
+  --danger: #ff1744;
+
+  /* POI 语义色（小区/商场/医疗/休闲/教育） */
+  --poi-residential: #00e676;  /* 绿 */
+  --poi-mall: #ff9100;         /* 橙 */
+  --poi-medical: #ff1744;      /* 红 */
+  --poi-leisure: #00b0ff;      /* 蓝 */
+  --poi-education: #d500f9;    /* 紫 */
 
   --background: var(--gis-bg);
   --background-secondary: var(--gis-bg-2);
   --surface: var(--gis-surface-solid);
-  --text: #e6f1ff;
-  --text-secondary: #9bb4d0;
-  --text-muted: #5f7c9c;
+  --text: #eaf2ff;
+  --text-secondary: #a9bce0;
+  --text-muted: #6b7aa8;
   --border: var(--gis-border);
   --border-light: var(--gis-border-soft);
+
+  --glow-cyan: 0 0 18px -2px rgba(0, 229, 255, 0.6);
+  --glow-magenta: 0 0 20px -2px rgba(255, 43, 214, 0.55);
+  --glow-violet: 0 0 20px -2px rgba(177, 75, 255, 0.5);
 
   --mono: 'JetBrains Mono', 'SFMono-Regular', 'Roboto Mono', Consolas, 'Liberation Mono', monospace;
 
@@ -56,14 +67,14 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--gis-bg);
-  /* 地形等高线光晕 + 经纬网格（测绘图幅质感） */
+  /* 霓虹光晕 + 经纬网格（赛博城市质感） */
   background-image:
-    radial-gradient(ellipse 55% 45% at 14% 18%, rgba(45, 212, 191, 0.10), transparent 60%),
-    radial-gradient(ellipse 50% 40% at 86% 12%, rgba(56, 189, 248, 0.08), transparent 60%),
-    radial-gradient(ellipse 65% 55% at 78% 88%, rgba(45, 212, 191, 0.06), transparent 60%),
-    radial-gradient(ellipse 40% 50% at 28% 92%, rgba(245, 158, 11, 0.05), transparent 60%),
-    repeating-linear-gradient(0deg, rgba(120, 170, 210, 0.045) 0 1px, transparent 1px 46px),
-    repeating-linear-gradient(90deg, rgba(120, 170, 210, 0.045) 0 1px, transparent 1px 46px);
+    radial-gradient(ellipse 55% 45% at 12% 16%, rgba(0, 229, 255, 0.14), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 88% 12%, rgba(177, 75, 255, 0.12), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 90%, rgba(255, 43, 214, 0.10), transparent 60%),
+    radial-gradient(ellipse 45% 50% at 24% 92%, rgba(0, 230, 118, 0.07), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(120, 150, 255, 0.05) 0 1px, transparent 1px 46px),
+    repeating-linear-gradient(90deg, rgba(120, 150, 255, 0.05) 0 1px, transparent 1px 46px);
   background-attachment: fixed;
   min-height: 100vh;
 }
@@ -124,7 +135,7 @@ body {
   font-size: 1.3rem;
   font-weight: 800;
   letter-spacing: 0.04em;
-  background: linear-gradient(90deg, #5eead4, #38bdf8);
+  background: linear-gradient(90deg, #00e5ff, #b14bff 55%, #ff2bd6);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1099,3 +1110,121 @@ html { scroll-behavior: smooth; }
   .hero-actions { flex-direction: column; }
   .hero-cta { width: 100%; }
 }
+
+/* ===================== 赛博霓虹增强 ===================== */
+.btn-primary {
+  background: linear-gradient(135deg, #00e5ff, #b14bff);
+  border: 1px solid rgba(0, 229, 255, 0.5);
+  color: #04121a;
+  font-weight: 700;
+  box-shadow: var(--glow-cyan);
+  transition: all var(--transition-fast);
+}
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 0 26px -2px rgba(0, 229, 255, 0.85), 0 0 26px -4px rgba(177, 75, 255, 0.6);
+  transform: translateY(-1px);
+}
+.btn-outline {
+  background: rgba(177, 75, 255, 0.06);
+  border: 1px solid rgba(177, 75, 255, 0.45);
+  color: var(--primary-light);
+  transition: all var(--transition-fast);
+}
+.btn-outline:hover {
+  background: rgba(177, 75, 255, 0.14);
+  box-shadow: var(--glow-violet);
+}
+.btn-secondary {
+  background: rgba(0, 229, 255, 0.1);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  color: var(--primary-light);
+}
+
+/* 导航激活态霓虹 */
+.nav-link.active {
+  color: var(--primary);
+  border-bottom-color: var(--accent-3);
+  box-shadow: inset 0 -2px 10px -4px rgba(255, 43, 214, 0.7);
+}
+.nav-link:hover { color: var(--primary-light); }
+
+/* GIS 定位框霓虹 */
+.gis-corner { border-color: rgba(0, 229, 255, 0.6) !important; box-shadow: 0 0 10px rgba(0, 229, 255, 0.4); }
+.reticle-dot { background: var(--accent-3); box-shadow: 0 0 10px var(--accent-3); }
+.hud-coord, .hud-compass { color: var(--primary-light); }
+.scale-bar .bar { background: linear-gradient(90deg, #00e5ff, #ff2bd6); }
+.compass circle { stroke: rgba(0, 229, 255, 0.7); }
+
+.cluster-controls {
+  background: linear-gradient(135deg, rgba(14, 20, 40, 0.92), rgba(19, 26, 58, 0.92));
+  border: 1px solid var(--gis-border);
+  box-shadow: var(--shadow-md), inset 0 0 30px -18px rgba(177, 75, 255, 0.5);
+}
+.page-header h2 { color: var(--text); text-shadow: 0 0 16px rgba(0, 229, 255, 0.35); }
+
+/* ===================== POI 语义划分 UI ===================== */
+.divide-tabs {
+  display: inline-flex; gap: .4rem; padding: .3rem;
+  background: var(--gis-surface-2); border: 1px solid var(--gis-border); border-radius: 999px;
+  margin-bottom: 1.1rem;
+}
+.divide-tab {
+  padding: .45rem 1.1rem; border-radius: 999px; cursor: pointer; font-size: .88rem; font-weight: 600;
+  color: var(--text-secondary); border: 1px solid transparent; transition: all var(--transition-fast);
+}
+.divide-tab:hover { color: var(--text); }
+.divide-tab.active {
+  color: #04121a; font-weight: 700;
+  background: linear-gradient(135deg, #00e5ff, #b14bff);
+  box-shadow: var(--glow-cyan);
+}
+
+/* POI 图例 */
+.poi-legend { display: flex; flex-wrap: wrap; gap: .6rem; margin: .8rem 0; }
+.poi-legend-item {
+  display: flex; align-items: center; gap: .45rem; font-size: .82rem; color: var(--text-secondary);
+  padding: .3rem .7rem; border: 1px solid var(--gis-border); border-radius: 999px; background: var(--gis-surface);
+}
+.poi-dot { width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
+
+/* POI 统计卡 */
+.poi-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .8rem; margin: 1rem 0; }
+.poi-stat {
+  position: relative; padding: .9rem 1rem; border-radius: var(--radius-sm);
+  background: var(--gis-surface); border: 1px solid var(--gis-border); overflow: hidden;
+}
+.poi-stat::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--c);
+  box-shadow: 0 0 12px var(--c);
+}
+.poi-stat .v { font-family: var(--mono); font-size: 1.5rem; font-weight: 800; color: var(--text); }
+.poi-stat .l { font-size: .78rem; color: var(--text-secondary); margin-top: .2rem; }
+.poi-stat .s { font-size: .72rem; color: var(--text-muted); margin-top: .15rem; }
+
+/* POI 片区清单（按类型分组） */
+.poi-region-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .7rem; }
+.poi-rcard {
+  padding: .75rem .85rem; border-radius: var(--radius-sm); background: var(--gis-surface);
+  border: 1px solid var(--gis-border); border-left: 3px solid var(--c);
+}
+.poi-rcard .rc-head { display: flex; align-items: center; justify-content: space-between; }
+.poi-rcard .rc-name { font-weight: 700; color: var(--text); font-size: .9rem; }
+.poi-rcard .rc-tag {
+  font-size: .68rem; font-weight: 700; color: #04121a; padding: .1rem .5rem; border-radius: 999px; background: var(--c);
+}
+.poi-rcard .rc-weight { font-size: .78rem; color: var(--text-secondary); margin-top: .35rem; font-family: var(--mono); }
+.poi-rcard .rc-bar { height: 6px; background: rgba(255,255,255,.06); border-radius: 999px; margin-top: .4rem; overflow: hidden; }
+.poi-rcard .rc-fill { height: 100%; background: var(--c); box-shadow: 0 0 8px var(--c); }
+
+.poi-hint {
+  font-size: .82rem; color: var(--text-secondary); line-height: 1.6;
+  background: rgba(177, 75, 255, 0.07); border: 1px solid rgba(177, 75, 255, 0.25);
+  border-radius: var(--radius-sm); padding: .7rem .9rem; margin-bottom: 1rem;
+}
+.poi-ctrl { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: .5rem; }
+.poi-ctrl label { font-size: .8rem; color: var(--text-secondary); display: flex; align-items: center; gap: .35rem; }
+.poi-ctrl input[type=range] { width: 120px; accent-color: var(--accent-3); }
+
+/* 地图图例分隔 */
+.legend-sep { width: 1px; align-self: stretch; background: var(--gis-border); margin: 0 .2rem; }
+.legend-dot { box-shadow: 0 0 8px currentColor; }

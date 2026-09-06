@@ -63,18 +63,19 @@ const randInt = (min, max) => Math.floor(rnd() * (max - min + 1)) + min;
 
 /* ----------------------------- 城市热点 ----------------------------- */
 // 坐标均为高德 GCJ-02（与前端地图体系一致，全程不纠偏）
+// poi_type 用于「POI 语义划分」：小区/商场/医疗/休闲/教育
 const HOTSPOTS = {
   beijing: [
-    { name: "国贸/CBD", lng: 116.461, lat: 39.909, w: 1.0, sigma: 0.013 },
-    { name: "中关村", lng: 116.316, lat: 39.983, w: 1.0, sigma: 0.012 },
-    { name: "五道口", lng: 116.337, lat: 39.992, w: 0.8, sigma: 0.010 },
-    { name: "望京", lng: 116.470, lat: 40.000, w: 0.9, sigma: 0.013 },
-    { name: "西单", lng: 116.374, lat: 39.907, w: 0.7, sigma: 0.009 },
-    { name: "三里屯", lng: 116.455, lat: 39.937, w: 0.8, sigma: 0.010 },
-    { name: "亦庄", lng: 116.506, lat: 39.795, w: 0.5, sigma: 0.016 },
-    { name: "上地/西二旗", lng: 116.305, lat: 40.051, w: 0.9, sigma: 0.014 },
-    { name: "通州北苑", lng: 116.658, lat: 39.909, w: 0.5, sigma: 0.018 },
-    { name: "丰台科技园", lng: 116.279, lat: 39.858, w: 0.5, sigma: 0.015 },
+    { name: "国贸/CBD", lng: 116.461, lat: 39.909, w: 1.0, sigma: 0.013, poi_type: "mall" },
+    { name: "中关村", lng: 116.316, lat: 39.983, w: 1.0, sigma: 0.012, poi_type: "education" },
+    { name: "五道口", lng: 116.337, lat: 39.992, w: 0.8, sigma: 0.010, poi_type: "education" },
+    { name: "望京", lng: 116.470, lat: 40.000, w: 0.9, sigma: 0.013, poi_type: "residential" },
+    { name: "西单", lng: 116.374, lat: 39.907, w: 0.7, sigma: 0.009, poi_type: "mall" },
+    { name: "三里屯", lng: 116.455, lat: 39.937, w: 0.8, sigma: 0.010, poi_type: "leisure" },
+    { name: "亦庄", lng: 116.506, lat: 39.795, w: 0.5, sigma: 0.016, poi_type: "residential" },
+    { name: "上地/西二旗", lng: 116.305, lat: 40.051, w: 0.9, sigma: 0.014, poi_type: "residential" },
+    { name: "通州北苑", lng: 116.658, lat: 39.909, w: 0.5, sigma: 0.018, poi_type: "residential" },
+    { name: "丰台科技园", lng: 116.279, lat: 39.858, w: 0.5, sigma: 0.015, poi_type: "medical" },
   ],
 };
 
@@ -216,6 +217,7 @@ function makeEvent(idx, hotspot) {
   return {
     id: `evt-${String(idx).padStart(4, "0")}`,
     type,
+    poi_type: hotspot.poi_type,
     title,
     description: desc,
     category,
@@ -260,6 +262,7 @@ const geojson = {
     properties: {
       id: e.id,
       type: e.type,
+      poi_type: e.poi_type,
       title: e.title,
       category: e.category,
       weight: e.weight,
@@ -270,11 +273,11 @@ const geojson = {
 fs.writeFileSync(path.join(OUT, "events.geojson"), JSON.stringify(geojson, null, 2));
 
 // 3) CSV（Excel 核查 / 算法离线处理）
-const header = ["id", "type", "title", "category", "weight", "latitude", "longitude", "price", "contact", "hotspot", "created_at"];
+const header = ["id", "type", "poi_type", "title", "category", "weight", "latitude", "longitude", "price", "contact", "hotspot", "created_at"];
 const csv = [
   header.join(","),
   ...events.map((e) =>
-    [e.id, e.type, e.title, e.category, e.weight, e.latitude, e.longitude, e.price ?? "", e.contact, e.hotspot, e.created_at]
+    [e.id, e.type, e.poi_type, e.title, e.category, e.weight, e.latitude, e.longitude, e.price ?? "", e.contact, e.hotspot, e.created_at]
       .map((v) => `"${String(v).replace(/"/g, '""')}"`)
       .join(",")
   ),
@@ -283,6 +286,7 @@ fs.writeFileSync(path.join(OUT, "events.csv"), "\ufeff" + csv);
 
 /* ------------------------------ 汇总 ------------------------------ */
 const byType = events.reduce((m, e) => ((m[e.type] = (m[e.type] || 0) + 1), m), {});
+const byPoi = events.reduce((m, e) => ((m[e.poi_type] = (m[e.poi_type] || 0) + 1), m), {});
 const byHot = events.reduce((m, e) => ((m[e.hotspot] = (m[e.hotspot] || 0) + 1), m), {});
 const totalWeight = events.reduce((s, e) => s + e.weight, 0);
 
@@ -291,6 +295,7 @@ console.log(`   城市   : ${CITY}`);
 console.log(`   种子   : ${SEED}`);
 console.log(`   事件数 : ${events.length}`);
 console.log("   按类型 :", byType);
+console.log("   按 POI :", byPoi);
 console.log("   总权重 :", totalWeight.toFixed(1));
 console.log("   按热点 :", byHot);
 console.log(`   输出   : ${OUT}`);

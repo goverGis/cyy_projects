@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 
 from app.core.database import Base, SessionLocal, engine
 from app.models.beijing import BeijingDistrict
@@ -47,6 +47,13 @@ def main():
     print("⏳ 连接数据库并建表（如已存在则跳过）…")
     try:
         Base.metadata.create_all(bind=engine)
+        # 兼容升级：若 event 表缺少 poi_type 列则自动添加
+        with engine.connect() as conn:
+            cols = [c["name"] for c in inspect(engine).get_columns("event")]
+            if "poi_type" not in cols:
+                print("🔧 event 表缺少 poi_type 列，正在添加…")
+                conn.execute(text("ALTER TABLE event ADD COLUMN poi_type VARCHAR(32) DEFAULT 'residential'"))
+                conn.commit()
     except Exception as e:
         print("❌ 无法连接 / 建表，请检查 DATABASE_URL 与 PostGIS：", e)
         sys.exit(1)
@@ -71,6 +78,7 @@ def main():
         db.add(
             Event(
                 type=e["type"],
+                poi_type=e.get("poi_type", "residential"),
                 title=e["title"],
                 description=e.get("description"),
                 category=e.get("category"),

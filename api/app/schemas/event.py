@@ -9,7 +9,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.models.event import EVENT_TYPES, EVENT_STATUSES
+from app.models.event import EVENT_TYPES, EVENT_STATUSES, POI_TYPES
 
 
 def _check_lat(v: float) -> float:
@@ -26,6 +26,7 @@ def _check_lng(v: float) -> float:
 
 class EventBase(BaseModel):
     type: str = Field(description="secondhand | lostfound | emergency | discussion")
+    poi_type: str = Field(default="residential", description="residential | mall | medical | leisure | education")
     title: str = Field(min_length=1, max_length=200)
     description: str | None = None
     category: str | None = None
@@ -40,6 +41,13 @@ class EventBase(BaseModel):
     def _type_valid(cls, v: str) -> str:
         if v not in EVENT_TYPES:
             raise ValueError(f"type 必须是 {EVENT_TYPES} 之一")
+        return v
+
+    @field_validator("poi_type")
+    @classmethod
+    def _poi_type_valid(cls, v: str) -> str:
+        if v not in POI_TYPES:
+            raise ValueError(f"poi_type 必须是 {POI_TYPES} 之一")
         return v
 
     @field_validator("latitude")
@@ -69,6 +77,7 @@ class EventUpdate(BaseModel):
     """全字段可选，未提供的保持原值。"""
 
     type: str | None = None
+    poi_type: str | None = None
     title: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = None
     category: str | None = None
@@ -84,6 +93,13 @@ class EventUpdate(BaseModel):
     def _type_valid(cls, v: str | None) -> str | None:
         if v is not None and v not in EVENT_TYPES:
             raise ValueError(f"type 必须是 {EVENT_TYPES} 之一")
+        return v
+
+    @field_validator("poi_type")
+    @classmethod
+    def _poi_type_valid(cls, v: str | None) -> str | None:
+        if v is not None and v not in POI_TYPES:
+            raise ValueError(f"poi_type 必须是 {POI_TYPES} 之一")
         return v
 
     @field_validator("status")
@@ -109,6 +125,7 @@ class EventOut(BaseModel):
 
     id: UUID
     type: str
+    poi_type: str
     title: str
     description: str | None = None
     category: str | None = None

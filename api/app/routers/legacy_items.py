@@ -45,6 +45,7 @@ def _normalize(e: dict) -> dict:
     return {
         "id": e.get("id"),
         "type": e.get("type"),
+        "poi_type": e.get("poi_type", "residential"),
         "title": e.get("title"),
         "description": e.get("description"),
         "category": e.get("category"),

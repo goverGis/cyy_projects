@@ -1,3 +1,4 @@
+from app.algorithms.poi_divide import poi_divide
 from app.algorithms.territory import (
     TerritoryResult,
     divide,
@@ -16,4 +17,5 @@ __all__ = [
     "kmeans_divide",
     "evaluate",
     "from_points",
+    "poi_divide",
 ]

@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException
 from shapely.geometry import mapping, shape as shapely_shape, Point
 from sqlalchemy import func, select, text
 
-from app.algorithms import divide, random_divide, grid_divide, kmeans_divide
+from app.algorithms import divide, random_divide, grid_divide, kmeans_divide, poi_divide
 from app.core.database import SessionLocal
 from app.models.beijing import BeijingDistrict  # noqa: F401  确保 create_all 注册该表
 from app.models.event import Event
@@ -17,6 +17,9 @@ from app.schemas.territory import (
     BenchmarkRow,
     DivideRequest,
     DivideResponse,
+    PoiDivideRequest,
+    PoiDivideResponse,
+    PoiRegionOut,
     RegionOut,
 )
 
@@ -407,3 +410,115 @@ def benchmark_endpoint(k: int = 10):
         r.rank = i + 1
         r.is_recommended = (i == 0)
     return BenchmarkResponse(k=k, rows=rows, recommended_method=ranked[0].method)
+
+
+# ========== POI 语义划分（赛博霓虹新功能）==========
+
+# POI 类型元数据：中文标签 + 语义色（与前端 index.css 的 --poi-* 保持一致）
+POI_META = {
+    "residential": {"label": "小区/住宅", "color": "#00e676"},
+    "mall": {"label": "商场", "color": "#ff9100"},
+    "medical": {"label": "医疗", "color": "#ff1744"},
+    "leisure": {"label": "休闲", "color": "#00b0ff"},
+    "education": {"label": "教育", "color": "#d500f9"},
+}
+
+
+def _load_poi_points(req: PoiDivideRequest):
+    """加载 POI 点集（含 poi_type 语义标签），来源：数据库 > 本地文件。
+
+    返回 (xy, w, poi_types, source)。
+    """
+    mode = (req.source or "auto").lower()
+    if mode in ("auto", "database"):
+        try:
+            with SessionLocal() as db:
+                stmt = select(
+                    Event.longitude, Event.latitude, Event.weight, Event.poi_type
+                )
+                if req.type_filter:
+                    stmt = stmt.where(Event.poi_type.in_(req.type_filter))
+                if req.time_window and req.time_window.get("start") and req.time_window.get("end"):
+                    stmt = stmt.where(
+                        Event.created_at.between(req.time_window["start"], req.time_window["end"])
+                    )
+                rows = db.execute(stmt).all()
+            if not rows:
+                raise ValueError("event 表为空或该时间窗无数据")
+            xy = np.array([[r[0], r[1]] for r in rows], dtype=float)
+            w = np.array([float(r[2]) for r in rows], dtype=float)
+            ptypes = [r[3] for r in rows]
+            return xy, w, ptypes, "database"
+        except Exception as e:
+            if mode == "database":
+                raise HTTPException(status_code=502, detail=f"数据库读取失败：{e}")
+            print(f"[warn] POI 数据库读取失败，回退本地文件：{e}")
+
+    # 文件回退
+    if DATA_FILE.exists():
+        doc = json.loads(DATA_FILE.read_text(encoding="utf-8"))
+        pts = doc["events"]
+        if req.type_filter:
+            pts = [p for p in pts if p.get("poi_type") in req.type_filter]
+        return (
+            np.array([[p["longitude"], p["latitude"]] for p in pts]),
+            np.array([float(p.get("weight", 1.0)) for p in pts]),
+            [p.get("poi_type", "residential") for p in pts],
+            "file",
+        )
+    raise HTTPException(status_code=404, detail="无可用 POI 点集：请先运行造数器或导入事件")
+
+
+@router.post("/poi-divide", response_model=PoiDivideResponse)
+def poi_divide_endpoint(req: PoiDivideRequest):
+    """POI 语义划分：以小区为单元，邻近小区合并成居住片区，再依次按商场/医疗/休闲/教育聚成片区。
+
+    每个 POI 类型内部用 DBSCAN（按真实地理距离 eps）聚类，一个簇即一个语义片区。
+    """
+    xy, w, poi_types, source = _load_poi_points(req)
+    res = poi_divide(
+        xy, poi_types, w,
+        eps_by_type=req.eps_by_type,
+        min_samples=req.min_samples,
+    )
+    regions = [
+        PoiRegionOut(
+            region_id=r.region_id,
+            poi_type=r.poi_type,
+            weight=round(r.weight, 2),
+            point_count=r.point_count,
+            centroid=r.centroid,
+            polygon=r.polygon,
+        )
+        for r in res.regions
+    ]
+    # 给每个 Feature 补上语义色与中文标签，前端地图直接用它着色
+    for f in res.geojson["features"]:
+        pt = f["properties"]["poi_type"]
+        f["properties"]["poi_color"] = POI_META.get(pt, {}).get("color", "#888")
+        f["properties"]["poi_label"] = POI_META.get(pt, {}).get("label", pt)
+    return PoiDivideResponse(
+        regions=regions,
+        total_weight=round(res.total_weight, 2),
+        by_type=res.by_type,
+        geojson=res.geojson,
+        source=source,
+        eps_by_type=req.eps_by_type,
+    )
+
+
+@router.get("/poi-types")
+def poi_types_endpoint():
+    """返回当前数据中各 POI 类型的数量分布，供前端图例与筛选。"""
+    try:
+        with SessionLocal() as db:
+            rows = db.execute(
+                select(Event.poi_type, func.count()).group_by(Event.poi_type)
+            ).all()
+        counts = {r[0]: r[1] for r in rows}
+    except Exception:
+        counts = {}
+    return {
+        "poi_types": counts,
+        "meta": POI_META,
+    }

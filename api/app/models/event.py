@@ -26,6 +26,7 @@ from sqlalchemy.orm import Mapped, column_property, mapped_column
 from app.core.database import Base
 
 EVENT_TYPES = ("secondhand", "lostfound", "emergency", "discussion")
+POI_TYPES = ("residential", "mall", "medical", "leisure", "education")
 EVENT_STATUSES = ("active", "resolved", "closed")
 
 
@@ -36,12 +37,19 @@ class Event(Base):
             "type IN ('secondhand','lostfound','emergency','discussion')",
             name="event_type_chk",
         ),
+        CheckConstraint(
+            "poi_type IN ('residential','mall','medical','leisure','education')",
+            name="event_poi_type_chk",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
     )
     type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    poi_type: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="residential", index=True
+    )
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     category: Mapped[str | None] = mapped_column(String(64))

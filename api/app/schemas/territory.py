@@ -78,3 +78,42 @@ class BenchmarkResponse(BaseModel):
     k: int
     rows: list[BenchmarkRow]
     recommended_method: str | None = None
+
+
+# ========== POI 语义划分（赛博霓虹新功能）==========
+
+class PoiDivideRequest(BaseModel):
+    eps_by_type: dict[str, float] = Field(
+        default={"residential": 700, "mall": 600, "medical": 450, "leisure": 500, "education": 500},
+        description="各类 POI 的空间聚类半径（米）；小区大半径→邻里片区，医疗/休闲小半径→保留多片区",
+    )
+    min_samples: int = Field(default=1, ge=1, description="DBSCAN 最小样本数；1 表示不允许噪声点")
+    type_filter: list[str] | None = Field(
+        default=None, description="仅对指定 POI 类型划分，如 ['residential','mall']"
+    )
+    time_window: dict | None = Field(
+        default=None,
+        description="{'start': ISO, 'end': ISO}，仅对该时间窗内的事件划分；缺省为全量",
+    )
+    source: str = Field(
+        default="auto",
+        description="数据源：auto（优先数据库）| database | file",
+    )
+
+
+class PoiRegionOut(BaseModel):
+    region_id: int
+    poi_type: str
+    weight: float
+    point_count: int
+    centroid: list[float]
+    polygon: Any | None = None
+
+
+class PoiDivideResponse(BaseModel):
+    regions: list[PoiRegionOut]
+    total_weight: float
+    by_type: dict[str, int]
+    geojson: dict
+    source: str = "database"
+    eps_by_type: dict[str, float]

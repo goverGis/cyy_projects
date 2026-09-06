@@ -15,6 +15,22 @@ const TYPE_NAMES = {
   discussion: '区域讨论'
 }
 
+// POI 语义色（与后端 / 区域划分页保持一致）
+const POI_COLORS = {
+  residential: '#00e676',
+  mall: '#ff9100',
+  medical: '#ff1744',
+  leisure: '#00b0ff',
+  education: '#d500f9'
+}
+const POI_LABELS = {
+  residential: '小区/住宅',
+  mall: '商场',
+  medical: '医疗',
+  leisure: '休闲',
+  education: '教育'
+}
+
 function MapView() {
   const mapRef = useRef(null)
   const mapInstance = useRef(null)
@@ -134,7 +150,7 @@ function MapView() {
           size: new window.AMap.Size(28, 28),
           image: 'data:image/svg+xml,' + encodeURIComponent(`
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28">
-              <circle cx="12" cy="12" r="10" fill="${COLORS[item.type] || '#667eea'}" stroke="#fff" stroke-width="3"/>
+              <circle cx="12" cy="12" r="10" fill="${POI_COLORS[item.poi_type] || COLORS[item.type] || '#667eea'}" stroke="#fff" stroke-width="3"/>
             </svg>
           `),
           imageSize: new window.AMap.Size(28, 28)
@@ -294,6 +310,13 @@ function MapView() {
               <span className="legend-label">当前位置</span>
             </div>
           )}
+          <div className="legend-sep" />
+          {Object.entries(POI_COLORS).map(([key, color]) => (
+            <div key={key} className="legend-item">
+              <span className="legend-dot" style={{ background: color, boxShadow: `0 0 8px ${color}` }}></span>
+              <span className="legend-label">{POI_LABELS[key]}</span>
+            </div>
+          ))}
         </div>
       </div>
 
