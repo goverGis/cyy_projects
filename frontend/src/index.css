@@ -1223,6 +1223,24 @@ html { scroll-behavior: smooth; }
 .poi-ctrl { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: .5rem; }
 .poi-ctrl label { font-size: .8rem; color: var(--text-secondary); display: flex; align-items: center; gap: .35rem; }
 .poi-ctrl input[type=range] { width: 120px; accent-color: var(--accent-3); }
+.poi-switch {
+  display: inline-flex; align-items: center; gap: .45rem; font-size: .82rem; font-weight: 600;
+  color: var(--text); background: var(--surface); border: 1px solid var(--border);
+  padding: .4rem .7rem; border-radius: 999px; cursor: pointer; user-select: none;
+}
+.poi-switch input { accent-color: var(--primary); width: 15px; height: 15px; }
+.poi-switch:has(input:disabled) { opacity: .5; cursor: not-allowed; }
+
+/* POI 均衡指标摘要卡 */
+.poi-balance {
+  display: flex; flex-wrap: wrap; gap: .6rem; margin: .8rem 0 1rem;
+}
+.poi-balance .pb-item {
+  display: inline-flex; align-items: baseline; gap: .35rem; font-size: .78rem; color: var(--text-secondary);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: .45rem .75rem;
+}
+.poi-balance .pb-item b { font-family: var(--mono); font-size: 1rem; color: var(--text); }
 
 /* 地图图例分隔 */
 .legend-sep { width: 1px; align-self: stretch; background: var(--gis-border); margin: 0 .2rem; }

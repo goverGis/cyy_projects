@@ -480,6 +480,11 @@ def poi_divide_endpoint(req: PoiDivideRequest):
         xy, poi_types, w,
         eps_by_type=req.eps_by_type,
         min_samples=req.min_samples,
+        balanced=req.balanced,
+        target_k=req.target_k,
+        lam=req.lam,
+        mu=req.mu,
+        seed=req.seed,
     )
     regions = [
         PoiRegionOut(
@@ -489,6 +494,12 @@ def poi_divide_endpoint(req: PoiDivideRequest):
             point_count=r.point_count,
             centroid=r.centroid,
             polygon=r.polygon,
+            unit_count=r.unit_count,
+            capacity=r.capacity,
+            load_ratio=r.load_ratio,
+            overload=r.overload,
+            radius_m=r.radius_m,
+            suggested_action=r.suggested_action,
         )
         for r in res.regions
     ]
@@ -497,6 +508,9 @@ def poi_divide_endpoint(req: PoiDivideRequest):
         pt = f["properties"]["poi_type"]
         f["properties"]["poi_color"] = POI_META.get(pt, {}).get("color", "#888")
         f["properties"]["poi_label"] = POI_META.get(pt, {}).get("label", pt)
+        f["properties"]["suggested_action"] = next(
+            (r.suggested_action for r in regions if r.region_id == f["properties"]["region_id"]), None
+        )
     return PoiDivideResponse(
         regions=regions,
         total_weight=round(res.total_weight, 2),
@@ -504,6 +518,10 @@ def poi_divide_endpoint(req: PoiDivideRequest):
         geojson=res.geojson,
         source=source,
         eps_by_type=req.eps_by_type,
+        metrics=res.metrics,
+        balanced=res.balanced,
+        capacity=res.capacity,
+        unit_count=res.unit_count,
     )
 
 

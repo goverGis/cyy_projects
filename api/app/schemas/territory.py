@@ -84,10 +84,18 @@ class BenchmarkResponse(BaseModel):
 
 class PoiDivideRequest(BaseModel):
     eps_by_type: dict[str, float] = Field(
-        default={"residential": 700, "mall": 600, "medical": 450, "leisure": 500, "education": 500},
-        description="各类 POI 的空间聚类半径（米）；小区大半径→邻里片区，医疗/休闲小半径→保留多片区",
+        default={"residential": 350, "mall": 450, "medical": 400, "leisure": 400, "education": 400},
+        description="各类 POI 的「单元识别半径」（米）：先把邻近事件聚成原子单元（一个小区/商圈/院区）",
     )
     min_samples: int = Field(default=1, ge=1, description="DBSCAN 最小样本数；1 表示不允许噪声点")
+    balanced: bool = Field(
+        default=True,
+        description="容量约束聚合：把原子单元聚成片区且各片区业务量均衡（False 则一个单元即一个片区）",
+    )
+    target_k: int = Field(default=48, ge=2, le=200, description="目标片区总数（balanced 模式）")
+    lam: float = Field(default=2.0, ge=0, description="均衡权重 λ：越大越均衡、服务半径越大")
+    mu: float = Field(default=0.1, ge=0, description="紧凑度权重 μ")
+    seed: int = Field(default=42, description="随机种子")
     type_filter: list[str] | None = Field(
         default=None, description="仅对指定 POI 类型划分，如 ['residential','mall']"
     )
@@ -108,6 +116,12 @@ class PoiRegionOut(BaseModel):
     point_count: int
     centroid: list[float]
     polygon: Any | None = None
+    unit_count: int = 1                  # 由几个原子单元（小区/商圈/院区）聚合而成
+    capacity: float | None = None        # 片区业务量上限（balanced 模式）
+    load_ratio: float | None = None      # 负载率 = weight / capacity
+    overload: bool = False
+    radius_m: float = 0.0                # 平均服务半径
+    suggested_action: str | None = None  # 建议拆分 / 可合并 / 正常
 
 
 class PoiDivideResponse(BaseModel):
@@ -117,3 +131,7 @@ class PoiDivideResponse(BaseModel):
     geojson: dict
     source: str = "database"
     eps_by_type: dict[str, float]
+    metrics: dict = Field(default_factory=dict, description="片区数 / CV / 超载数 / 服务半径等汇总指标")
+    balanced: bool = False
+    capacity: float | None = None
+    unit_count: int = 0

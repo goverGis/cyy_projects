@@ -13,6 +13,16 @@ const THIN_THRESHOLD = 400
 // 低于该 zoom 强制抽稀（城市级俯视，单点无意义）
 const THIN_ZOOM = 12
 
+// 负载率 → 片区配色（绿=轻载，橙=临界，红=过载），让地图直接表达负载；
+// 容量模式与 POI 均衡模式共用，自然色系与卡片状态徽章一致。
+function loadColor(ratio) {
+  if (ratio == null) return '#4a90d9'
+  if (ratio >= 1.0) return '#e2604f'   // 过载（珊瑚红）
+  if (ratio >= 0.85) return '#e08a4b'  // 临界（暖阳橙）
+  if (ratio >= 0.6) return '#d9a93a'   // 中载（琥珀）
+  return '#4caf72'                      // 轻载（叶绿）
+}
+
 function TerritoryPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -45,6 +55,9 @@ function TerritoryPage() {
   const [eps, setEps] = useState({
     residential: 700, mall: 600, medical: 450, leisure: 500, education: 500
   })
+  // POI 两阶段：是否做「容量约束聚合」（单元→均衡片区），以及目标片区总数
+  const [poiBalanced, setPoiBalanced] = useState(true)
+  const [poiTargetK, setPoiTargetK] = useState(48)
   const [poiCounts, setPoiCounts] = useState({})   // 各 POI 类型事件总数（来自 /poi-types）
 
   // 时间滑块（P0）：预取时间序列，拖动/播放直接渲染对应切片，无需每次打后端
@@ -121,10 +134,15 @@ function TerritoryPage() {
     const map = mapInstance.current
     if (!map) return
     const feats = data.geojson.features
+    const balanced = !!data.balanced
     feats.forEach(f => {
       const ring = f.geometry.coordinates[0]
       const path = ring.map(([lng, lat]) => [lng, lat])
-      const color = f.properties.poi_color || POI_COLORS[f.properties.poi_type] || '#888'
+      // 均衡模式：按「负载率」着色（绿→橙→红），让地图表达均衡效果；
+      // 纯语义模式：按 POI 类型着色，强调地理语义。
+      const color = balanced
+        ? loadColor(f.properties.load_ratio)
+        : (f.properties.poi_color || POI_COLORS[f.properties.poi_type] || '#888')
       const poly = new window.AMap.Polygon({
         path, strokeColor: color, strokeWeight: 2, strokeOpacity: 0.95,
         fillColor: color, fillOpacity: 0.22
@@ -132,13 +150,17 @@ function TerritoryPage() {
       poly.setMap(map)
       regionLayerRef.current.push(poly)
       const [lng, lat] = f.properties.centroid
+      // 标签：均衡模式显示「负载% + 超载标记」，纯语义模式显示「点数」
+      const label = balanced
+        ? `${f.properties.poi_label || f.properties.poi_type}\n负载 ${Math.round((f.properties.load_ratio || 0) * 100)}%${f.properties.overload ? ' ⚠' : ''}`
+        : `${f.properties.poi_label || f.properties.poi_type}\n${f.properties.point_count} 点`
       const text = new window.AMap.Text({
-        text: `${f.properties.poi_label || f.properties.poi_type}\n${f.properties.point_count} 点`,
+        text: label,
         position: [lng, lat], anchor: 'center',
         style: {
-          background: 'rgba(5,6,15,.82)', border: `1px solid ${color}`,
+          background: 'rgba(255,255,255,.92)', border: `1px solid ${color}`,
           'border-radius': '4px', padding: '2px 6px', 'font-size': '11px',
-          color: '#eaf2ff', 'white-space': 'pre'
+          color: '#1f2937', 'white-space': 'pre', 'font-weight': 600
         }
       })
       text.setMap(map)
@@ -360,7 +382,11 @@ function TerritoryPage() {
     try {
       const res = await fetch('/api/territory/poi-divide', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eps_by_type: eps })
+        body: JSON.stringify({
+          eps_by_type: eps,
+          balanced: poiBalanced,
+          target_k: poiTargetK,
+        })
       })
       const data = await res.json()
       poiResultRef.current = data
@@ -547,15 +573,24 @@ function TerritoryPage() {
       {mode === 'poi' && (
         <div className="cluster-controls">
           <div className="poi-hint">
-            🧩 <b>划分逻辑</b>：以「小区」为基本单元，邻近小区按 {eps.residential}m 半径合并为居住片区；
-            再依次将<b style={{ color: 'var(--poi-mall)' }}> 商场</b>、
-            <b style={{ color: 'var(--poi-medical)' }}> 医疗</b>、
-            <b style={{ color: 'var(--poi-leisure)' }}> 休闲</b>、
-            <b style={{ color: 'var(--poi-education)' }}> 教育</b> 按各自半径聚成独立语义片区。
+            🧩 <b>两阶段划分</b>：① 以「小区/商圈/院区」为<b>原子单元</b>（按各类型半径 DBSCAN 聚成）；
+            ② <b style={{ color: 'var(--poi-mall)' }}>均衡聚合</b>开启时，把原子单元聚成业务量均衡的片区——
+            与容量约束划分同台对比，可看「负载率 / 超载 / 服务半径」。
           </div>
           <div className="poi-ctrl">
+            <label className="poi-switch" title="开启后片区业务量尽量均衡（带容量约束）；关闭则一个单元即一个片区">
+              <input type="checkbox" checked={poiBalanced}
+                onChange={e => setPoiBalanced(e.target.checked)} />
+              <span>均衡聚合</span>
+            </label>
+            <label className="poi-switch" title="目标片区总数（均衡模式）">
+              目标片区数 {poiTargetK}
+              <input type="range" min="12" max="120" step="4" value={poiTargetK}
+                disabled={!poiBalanced}
+                onChange={e => setPoiTargetK(parseInt(e.target.value))} />
+            </label>
             {Object.keys(POI_COLORS).map(t => (
-              <label key={t}>
+              <label key={t} title={`${POI_LABELS[t]} 单元识别半径`}>
                 <span className="poi-dot" style={{ color: POI_COLORS[t], background: POI_COLORS[t] }} />
                 {POI_LABELS[t]} {eps[t]}m
                 <input type="range" min="200" max="1200" step="50" value={eps[t]}
@@ -687,8 +722,18 @@ function TerritoryPage() {
             ))}
           </div>
 
+          {poiResult.balanced && poiResult.metrics && (
+            <div className="poi-balance">
+              <span className="pb-item"><b>{poiResult.metrics.cv_weight}</b> 均衡度 CV</span>
+              <span className="pb-item"><b style={{ color: poiResult.metrics.overload_count ? '#e2604f' : '#4caf72' }}>{poiResult.metrics.overload_count}</b> 个超载片区</span>
+              <span className="pb-item"><b>{poiResult.metrics.mean_radius_m}m</b> 平均服务半径</span>
+              <span className="pb-item"><b>{poiResult.metrics.max_radius_m}m</b> 最大服务半径</span>
+              <span className="pb-item"><b>{poiResult.unit_count}</b> 个原子单元 → {poiResult.metrics.region_count} 片区</span>
+            </div>
+          )}
+
           <div className="cluster-results">
-            <h3>语义片区清单（共 {poiResult.regions.length} 个）</h3>
+            <h3>语义片区清单（共 {poiResult.regions.length} 个{poiResult.balanced ? ' · 已均衡' : ' · 纯语义'}）</h3>
             <RegionCardList regions={poiResult.regions} onClick={focusRegion} activeId={activeRegion} />
           </div>
         </>
