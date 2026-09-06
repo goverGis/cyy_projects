@@ -255,6 +255,13 @@ def divide(
     iters: int = 60,
 ) -> TerritoryResult:
     """容量约束区域划分主入口。返回分配、中心、边界多边形、指标。"""
+    xy = np.asarray(xy, dtype=float)
+    weights = np.asarray(weights, dtype=float)
+    if len(xy) == 0:
+        raise ValueError("divide 需要至少 1 个点")
+    # 健壮性：片区数不能超过点数（容量约束下每片至少容纳 1 点），
+    # 否则初始化时会出现全等距离矩阵导致 NaN。路由层已校验，这里防御兜底。
+    k = max(1, min(int(k), len(xy)))
     rng = np.random.default_rng(seed)
     total_w = float(weights.sum())
     mean_w = total_w / k

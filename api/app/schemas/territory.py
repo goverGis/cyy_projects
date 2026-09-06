@@ -107,6 +107,10 @@ class PoiDivideRequest(BaseModel):
         default="auto",
         description="数据源：auto（优先数据库）| database | file",
     )
+    points: list[dict] | None = Field(
+        default=None,
+        description="直接传入点集（覆盖数据源）；每项含 longitude/latitude/weight/poi_type",
+    )
 
 
 class PoiRegionOut(BaseModel):
@@ -155,6 +159,10 @@ class SimulateRequest(BaseModel):
     type_filter: list[str] | None = None
     time_window: dict | None = None
     actions: list[SimulateAction] = Field(..., min_length=1, description="要推演的动作序列")
+    points: list[dict] | None = Field(
+        default=None,
+        description="直接传入点集（覆盖数据源）；每项含 longitude/latitude/weight/type",
+    )
 
 
 class SimulateRegionOut(BaseModel):

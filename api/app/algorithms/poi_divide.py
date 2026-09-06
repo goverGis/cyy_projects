@@ -282,7 +282,9 @@ def poi_divide(
         coarse_by_type[ptype] = units
         total_w += sum(u["weight"] for u in units)
 
-    capacity = (total_w / max(target_k, 1)) if balanced else None
+    # 容量 = 日均负载 / 目标片区数 × 1.2 峰值裕量 —— 与 /divide（容量约束划分）口径完全一致，
+    # 保证两个模式的负载率、超载判定可以同台对比。
+    capacity = (total_w / max(target_k, 1)) * 1.2 if balanced else None
 
     # 第二遍：balanced 模式下，把超容的粗单元用更小 eps 递归拆分，
     # 保证每个原子单元 ≤ 容量，阶段二才能真正均衡。

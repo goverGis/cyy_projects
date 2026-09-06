@@ -124,8 +124,21 @@ node generate.mjs              # 输出 ../data/events.json（北京 10 热点�
 ```bash
 cd api
 .venv/Scripts/python -m pytest -q
-# 14 passed（含 3 个真实 PostGIS 集成测试：Voronoi / 行政区裁剪 / HTTP 接口，需先建库灌数）
+# 46 passed（本机含真实 PostGIS 集成测试）；无数据库环境自动 37 passed + 9 skipped
+.venv/Scripts/python -m pytest --cov=app --cov-report=term   # 覆盖率（当前约 77%）
 ```
+
+**测试分层**（均可用 `pytest` 一键跑，DB 集成自动探测跳过）：
+
+| 层 | 文件 | 内容 |
+|---|---|---|
+| 算法单元 | `tests/test_territory.py` | 容量约束划分 / Voronoi / 评估指标；边界（单点、空集、两点）与 4000 点性能回归 |
+| POI 算法单元 | `tests/test_poi_divide.py` | 语义聚类 / 两阶段均衡 / **超容单元递归拆分**（含容量口径 ×1.2 回归） |
+| HTTP 接口 | `tests/test_endpoints.py` | `/divide` `/poi-divide` `/simulate`：用 `points` 直传点集，**无 DB 可跑** |
+| 时间序列集成 | `tests/test_timeseries.py` | `/timeseries` 累积窗口、逐片指标、balance_report（需 DB） |
+| PostGIS 集成 | `tests/test_territory.py`（末段） | 生产 Voronoi / 北京行政区裁剪（需 DB，自动跳过） |
+
+CI：`.github/workflows/ci.yml`（GitHub Actions）— API 测试 + 覆盖率 + 前端 `npm run build`。
 
 ---
 

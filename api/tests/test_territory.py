@@ -120,6 +120,47 @@ def test_evaluate_keys():
         assert k in keys
 
 
+# --------------------------- 边界与性能 --------------------------- #
+def test_divide_single_point_clamps_k():
+    """片区数超过点数时不应 NaN 崩溃，应自动收敛到点数。"""
+    xy = np.array([[116.40, 39.90]])
+    w = np.array([3.0])
+    res = divide(xy, w, k=2, lam=2.0, mu=0.1, seed=1)
+    assert res.k == 1
+    assert res.assignment.tolist() == [0]
+    assert res.metrics["capacity_violations"] == 0
+
+
+def test_divide_empty_raises():
+    with pytest.raises(ValueError):
+        divide(np.empty((0, 2)), np.empty(0), k=2)
+
+
+def test_divide_handles_two_points():
+    xy = np.array([[116.40, 39.90], [116.41, 39.91]])
+    w = np.array([1.0, 2.0])
+    res = divide(xy, w, k=2, lam=2.0, mu=0.1, seed=1)
+    assert res.k == 2
+    assert sorted(res.assignment.tolist()) == [0, 1]
+
+
+def test_divide_performance_4k_points():
+    """4000 点 / 12 片应在数秒内完成（回归防护：防 O(n²) 退化拖垮线上）。"""
+    import time
+
+    rng = np.random.default_rng(0)
+    xy = np.column_stack([
+        rng.uniform(116.30, 116.55, 4000),
+        rng.uniform(39.80, 40.00, 4000),
+    ])
+    w = rng.uniform(0.5, 3.0, 4000)
+    t0 = time.monotonic()
+    res = divide(xy, w, k=12, lam=2.0, mu=0.1, seed=42)
+    elapsed = time.monotonic() - t0
+    assert res.metrics["capacity_violations"] == 0
+    assert elapsed < 12.0, f"4000 点划分耗时 {elapsed:.1f}s，疑似性能退化"
+
+
 # --------------------------- 生产库集成（可跳过） --------------------------- #
 def _db_available():
     try:

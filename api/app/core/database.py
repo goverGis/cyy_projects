@@ -11,6 +11,7 @@ engine = create_engine(
     settings.DATABASE_URL,
     echo=settings.SQL_ECHO,
     pool_pre_ping=True,   # 本地 PG 长时间空闲后会断开，重连前先探活
+    connect_args={"connect_timeout": 5},  # 数据库不可达时快速失败（CI/降级场景）
 )
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)

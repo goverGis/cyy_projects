@@ -435,10 +435,21 @@ POI_META = {
 
 
 def _load_poi_points(req: PoiDivideRequest):
-    """加载 POI 点集（含 poi_type 语义标签），来源：数据库 > 本地文件。
+    """加载 POI 点集（含 poi_type 语义标签），来源：请求体 > 数据库 > 本地文件。
 
     返回 (xy, w, poi_types, source)。
     """
+    if req.points:
+        pts = req.points
+        if req.type_filter:
+            pts = [p for p in pts if p.get("poi_type") in req.type_filter]
+        return (
+            np.array([[p["longitude"], p["latitude"]] for p in pts]),
+            np.array([float(p.get("weight", 1.0)) for p in pts]),
+            [p.get("poi_type", "residential") for p in pts],
+            "request",
+        )
+
     mode = (req.source or "auto").lower()
     if mode in ("auto", "database"):
         try:
@@ -658,6 +669,7 @@ def simulate_endpoint(req: SimulateRequest):
         DivideRequest(
             k=req.k, lam=req.lam, mu=req.mu, seed=req.seed,
             type_filter=req.type_filter, source=req.source, time_window=req.time_window,
+            points=req.points,
         )
     )
     if len(xy) < req.k:
