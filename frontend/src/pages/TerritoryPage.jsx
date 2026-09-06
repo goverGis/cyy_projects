@@ -8,6 +8,41 @@ import BalanceReport from '../components/BalanceReport'
 // 业务事件类型配色（自然色系，与片区卡片的构成条保持一致）
 const TYPE_COLORS = { ...EVENT_COLORS }
 
+// 业务事件中文标签（事件点弹窗/贡献列表用）
+const EVENT_LABELS = {
+  secondhand: '闲置交易', lostfound: '寻物', emergency: '急救', discussion: '社区讨论',
+}
+
+// ---------- 因果联动：点↔片 几何工具 ----------
+// 射线法判断点是否在多边形环内（GeoJSON Polygon 的第一外环）
+function pointInRing(lng, lat, ring) {
+  let inside = false
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0]; const yi = ring[i][1]
+    const xj = ring[j][0]; const yj = ring[j][1]
+    if ((yi > lat) !== (yj > lat) && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside
+  }
+  return inside
+}
+
+// 返回包含 (lng,lat) 的片区 region_id；防御 MultiPolygon（取每个子多边形外环）
+function regionIdAtPoint(features, lng, lat) {
+  for (const f of features || []) {
+    const g = f.geometry
+    if (!g || !g.coordinates) continue
+    const polys = g.type === 'MultiPolygon' ? g.coordinates : [g.coordinates]
+    for (const poly of polys) {
+      if (poly && poly.length && pointInRing(lng, lat, poly[0])) return f.properties.region_id
+    }
+  }
+  return null
+}
+
+// 事件 → 中文类型标签
+function eventLabel(p) {
+  return POI_LABELS[p.poi_type] || EVENT_LABELS[p.type] || p.poi_type || p.type || '事件'
+}
+
 // 抽稀阈值：视窗内点数超过该值 → 用聚合桶渲染（点抽稀），否则用明细点
 const THIN_THRESHOLD = 400
 // 低于该 zoom 强制抽稀（城市级俯视，单点无意义）
@@ -72,6 +107,158 @@ function TerritoryPage() {
   const [playing, setPlaying] = useState(false)
   const playTimer = useRef(null)
 
+  // ===== 因果联动（P0-3）：事件点 ↔ 片区 双向高亮 =====
+  const flashRef = useRef([])          // 临时星标（Top 事件高亮）
+  const detailEvtsRef = useRef([])     // 最近一次明细事件点（供片区 Top 事件 / 贡献计算）
+  const detailAssignRef = useRef(new Map())  // region_id → 该片事件点（构建一次复用）
+  const featuresRef = useRef([])       // 当前展示的片区 GeoJSON features
+  const infoWinRef = useRef(null)      // 事件详情信息窗
+  const highlightRef = useRef(null)    // 当前高亮的 region_id
+
+  // 预构建「点 → 片区」归属表（明细点 ≤500、片区 ≤200，全量扫描一次可接受）
+  const assignCache = useRef({ f: null, e: null })
+  const buildAssign = () => {
+    if (assignCache.current.f === featuresRef.current && assignCache.current.e === detailEvtsRef.current) return
+    assignCache.current = { f: featuresRef.current, e: detailEvtsRef.current }
+    const map = new Map()
+    for (const e of detailEvtsRef.current) {
+      const rid = regionIdAtPoint(featuresRef.current, e.longitude, e.latitude)
+      if (rid == null) continue
+      if (!map.has(rid)) map.set(rid, [])
+      map.get(rid).push(e)
+    }
+    detailAssignRef.current = map
+  }
+
+  const clearFlash = () => {
+    flashRef.current.forEach(o => o.setMap && o.setMap(null))
+    flashRef.current = []
+  }
+
+  const closeInfoWin = () => {
+    if (infoWinRef.current) { try { infoWinRef.current.close() } catch (_) {} infoWinRef.current = null }
+  }
+
+  // 片区某片区的 Top N 事件（按权重降序）
+  const topEventsOf = (rid, n = 5) =>
+    (detailAssignRef.current.get(rid) || []).slice().sort((a, b) => (b.weight || 0) - (a.weight || 0)).slice(0, n)
+
+  // 星标高亮一组事件点（因果反向高亮：hover/click 片区 → 其事件）
+  const flashPoints = (evts) => {
+    clearFlash()
+    evts.forEach(p => {
+      const m = new window.AMap.CircleMarker({
+        center: [p.longitude, p.latitude], radius: 7, zIndex: 300,
+        strokeColor: '#fff', strokeWeight: 2, strokeOpacity: 1,
+        fillColor: '#f5a623', fillOpacity: 0.95, bubble: true,
+        extData: { evt: p },
+      })
+      m.setMap(mapInstance.current)
+      flashRef.current.push(m)
+    })
+  }
+
+  // 高亮单个片区（其余淡出），再次调用恢复由 highlightRegion 管理
+  const highlightRegion = (rid) => {
+    if (!regionLayerRef.current.length) return
+    regionLayerRef.current.forEach(o => {
+      if (!(o instanceof window.AMap.Polygon)) return
+      const b = o.getExtData()?.base
+      if (!b) return
+      const on = o.getExtData().region_id === rid
+      if (on) {
+        o.setOptions({ strokeWeight: 5, strokeOpacity: 1, fillOpacity: Math.min(0.6, (b.fillOpacity || 0.18) + 0.32), zIndex: 90 })
+      } else {
+        o.setOptions({ strokeWeight: b.strokeWeight ?? 2, strokeOpacity: 0.3, fillOpacity: Math.max(0.04, (b.fillOpacity || 0.18) - 0.13), zIndex: 10 })
+      }
+    })
+    highlightRef.current = rid
+  }
+
+  const unhighlightAll = () => {
+    regionLayerRef.current.forEach(o => {
+      if (!(o instanceof window.AMap.Polygon)) return
+      const b = o.getExtData()?.base
+      if (b) o.setOptions({ strokeWeight: b.strokeWeight ?? 2, strokeOpacity: b.strokeOpacity ?? 0.9, fillOpacity: b.fillOpacity ?? 0.18, zIndex: 5 })
+    })
+    highlightRef.current = null
+  }
+
+  // 从三个来源找 region（容量 / POI / 推演后）：simulate 视图下片区 id 不在 result 里
+  const findRegionAny = (rid) => {
+    if (simResult?.after?.regions) {
+      const r = simResult.after.regions.find(x => x.region_id === rid)
+      if (r) return r
+    }
+    const list = (mode === 'poi' ? poiResultRef.current?.regions : resultRef.current?.regions) || []
+    return list.find(x => x.region_id === rid)
+  }
+
+  // 事件点信息窗：展示所属片区 + 该点对片区负载的贡献
+  const showPointInfo = (p, rid, regionWeight) => {
+    closeInfoWin()
+    const map = mapInstance.current
+    if (!map) return
+    const pct = regionWeight ? ((p.weight || 0) / regionWeight) * 100 : 0
+    const label = eventLabel(p)
+    const content = `
+      <div style="font-family:inherit;font-size:12px;line-height:1.7;min-width:190px">
+        <div style="font-weight:700;color:#1f2937;margin-bottom:4px">📌 事件 · ${label}</div>
+        <div style="color:#4b5563">类型权重 <b style="color:#d97706">${p.weight ?? '-'}</b>
+          · 所属 <b style="color:#2563eb">片区 ${rid + 1}</b></div>
+        <div style="color:#4b5563">片区业务量 ${regionWeight ?? '-'}
+          → 该点贡献 <b style="color:#e2604f">${pct.toFixed(2)}%</b></div>
+      </div>`
+    const win = new window.AMap.InfoWindow({ content, offset: new window.AMap.Pixel(0, -8), isCustom: false })
+    win.open(map, [p.longitude, p.latitude])
+    infoWinRef.current = win
+  }
+
+  // 片区信息窗：Top 事件贡献排行（片区“由谁撑起来的”）
+  const showRegionInfo = (rid, tops) => {
+    closeInfoWin()
+    const map = mapInstance.current
+    const r = findRegionAny(rid)
+    if (!map || !r) return
+    const rows = tops.length
+      ? tops.map((t, i) => {
+        const pct = r.weight ? ((t.weight || 0) / r.weight) * 100 : 0
+        return `<div style="color:#4b5563">${i + 1}. ${eventLabel(t)} · 权重 ${t.weight ?? '-'} · <b style="color:#e2604f">占 ${pct.toFixed(1)}%</b></div>`
+      }).join('')
+      : '<div style="color:#9ca3af">当前视窗无明细事件（放大可查看）</div>'
+    const content = `
+      <div style="font-family:inherit;font-size:12px;line-height:1.8;min-width:230px">
+        <div style="font-weight:700;color:#1f2937;margin-bottom:4px">🗂 片区 ${rid + 1}
+          <span style="color:#6b7280;font-weight:400">（业务量 ${r.weight}）</span></div>
+        <div style="color:#6b7280;margin-bottom:3px">Top 贡献事件：</div>${rows}
+      </div>`
+    const win = new window.AMap.InfoWindow({ content, offset: new window.AMap.Pixel(0, -6) })
+    win.open(map, r.centroid)
+    infoWinRef.current = win
+  }
+
+  // 片区多边形统一交互：extData 记录基础样式（供高亮/恢复），绑定 点击/hover
+  const attachRegion = (poly, props) => {
+    poly.setExtData({
+      region_id: props.region_id,
+      base: { strokeColor: props.color, strokeOpacity: props.strokeOpacity ?? 0.9, strokeWeight: props.strokeWeight ?? 2, fillOpacity: props.fillOpacity ?? 0.18 },
+    })
+    poly.on('click', () => {
+      if (!featuresRef.current.length) return
+      buildAssign()
+      setActiveRegion(props.region_id)
+      highlightRegion(props.region_id)
+      flashPoints(topEventsOf(props.region_id, 5))
+      showRegionInfo(props.region_id, topEventsOf(props.region_id, 5))
+    })
+    poly.on('mouseover', () => {
+      if (!featuresRef.current.length || highlightRef.current !== null) return
+      buildAssign()
+      flashPoints(topEventsOf(props.region_id, 3))
+    })
+    poly.on('mouseout', () => { if (highlightRef.current == null) clearFlash() })
+  }
+
   // 点击片区卡片 → 地图飞到该片区中心并高亮（清单 ↔ 地图联动）
   const focusRegion = (id) => {
     setActiveRegion(id)
@@ -79,6 +266,11 @@ function TerritoryPage() {
     const r = (list || []).find(x => x.region_id === id)
     const map = mapInstance.current
     if (map && r && r.centroid) map.setZoomAndCenter(14, [r.centroid[0], r.centroid[1]])
+    if (map && featuresRef.current.length) {
+      buildAssign()
+      highlightRegion(id)
+      flashPoints(topEventsOf(id, 5))
+    }
   }
 
   // 渲染片区 Voronoi 多边形（与抽稀无关，始终全量）
@@ -104,6 +296,10 @@ function TerritoryPage() {
       })
       poly.setMap(map)
       regionLayerRef.current.push(poly)
+      attachRegion(poly, {
+        region_id: f.properties.region_id, color,
+        strokeWeight: 2, fillOpacity: is3D ? 0.35 : 0.18,
+      })
       const [lng, lat] = f.properties.centroid
       const text = new window.AMap.Text({
         text: `片区${f.properties.region_id + 1}\n权重 ${f.properties.weight}`,
@@ -133,6 +329,8 @@ function TerritoryPage() {
     try {
       map.setFitView(regionLayerRef.current.filter(o => o instanceof window.AMap.Polygon))
     } catch (_) {}
+    featuresRef.current = data.geojson.features
+    clearFlash(); closeInfoWin(); highlightRef.current = null
   }
 
   // 渲染 POI 语义片区：每个片区按其 POI 类型的霓虹色填充，中心标注类型+点数
@@ -155,6 +353,10 @@ function TerritoryPage() {
       })
       poly.setMap(map)
       regionLayerRef.current.push(poly)
+      attachRegion(poly, {
+        region_id: f.properties.region_id, color,
+        strokeWeight: 2, fillOpacity: balanced ? 0.22 : 0.28,
+      })
       const [lng, lat] = f.properties.centroid
       // 标签：均衡模式显示「负载% + 超载标记」，纯语义模式显示「点数」
       const label = balanced
@@ -175,6 +377,8 @@ function TerritoryPage() {
     try {
       map.setFitView(regionLayerRef.current.filter(o => o instanceof window.AMap.Polygon))
     } catch (_) {}
+    featuresRef.current = data.geojson.features
+    clearFlash(); closeInfoWin(); highlightRef.current = null
   }
 
   // 方案推演：按负载率着色渲染「前 / 后」片区（复用 loadColor）
@@ -195,6 +399,10 @@ function TerritoryPage() {
       })
       poly.setMap(map)
       regionLayerRef.current.push(poly)
+      attachRegion(poly, {
+        region_id: f.properties.region_id, color,
+        strokeWeight: 2, fillOpacity: 0.2,
+      })
       const [lng, lat] = f.properties.centroid
       const text = new window.AMap.Text({
         text: `片区${f.properties.region_id + 1}\n负载 ${Math.round((f.properties.load_ratio || 0) * 100)}%${f.properties.overload ? ' ⚠' : ''}`,
@@ -211,6 +419,8 @@ function TerritoryPage() {
     try {
       map.setFitView(regionLayerRef.current.filter(o => o instanceof window.AMap.Polygon))
     } catch (_) {}
+    featuresRef.current = geojson.features
+    clearFlash(); closeInfoWin(); highlightRef.current = null
     refreshPointLayer()
   }
 
@@ -277,9 +487,12 @@ function TerritoryPage() {
     const useThin = zoom < THIN_ZOOM || cnt.in_view > THIN_THRESHOLD
     setThinMode(useThin)
     clearPointLayer()
+    clearFlash(); closeInfoWin()
 
     if (useThin) {
       // 抽稀视图：聚合桶（DOM 标记数量级从数千降到几十），按主导事件类型着色
+      detailEvtsRef.current = []
+      detailAssignRef.current = new Map()
       cnt.buckets.forEach(bk => {
         const r = 6 + Math.sqrt(bk.count) * 2.2
         const dom = Object.entries(bk.types || {}).sort((a, b) => b[1] - a[1])[0]
@@ -291,7 +504,11 @@ function TerritoryPage() {
           extData: { count: bk.count, weight: bk.weight }
         })
         cm.setMap(map)
-        cm.on('click', () => alert(`该区域聚合 ${bk.count} 个事件\n总权重 ${bk.weight}\n类型分布 ${JSON.stringify(bk.types)}`))
+        // 因果联动引导：点击聚合桶 → 放大到该区域，zoomend 自动刷新成明细点，即可点单事件
+        cm.on('click', () => {
+          closeInfoWin()
+          map.setZoomAndCenter(Math.max(zoom, THIN_ZOOM + 2), [bk.cx, bk.cy])
+        })
         pointLayerRef.current.push(cm)
       })
       setDetailTotal(cnt.in_view)
@@ -300,16 +517,30 @@ function TerritoryPage() {
       const PAGE = 500
       const data = await (await fetch(`/api/items?minlng=${minlng}&minlat=${minlat}&maxlng=${maxlng}&maxlat=${maxlat}&offset=0&limit=${PAGE}`)).json()
       setDetailTotal(data.total)
+      detailEvtsRef.current = data.items || []
       ;(data.items || []).forEach(p => {
         const c = POI_COLORS[p.poi_type] || TYPE_COLORS[p.type] || '#888'
         const cm = new window.AMap.CircleMarker({
           center: [p.longitude, p.latitude], radius: 3,
           strokeColor: c, strokeOpacity: 0.8, strokeWeight: 1,
-          fillColor: c, fillOpacity: 0.7, bubble: true
+          fillColor: c, fillOpacity: 0.7, bubble: true,
+          extData: { evt: p }
         })
         cm.setMap(map)
+        // 因果联动：点击事件点 → 反查所属片区并高亮 + 展示该点对片区负载的贡献
+        cm.on('click', () => {
+          const rid = regionIdAtPoint(featuresRef.current, p.longitude, p.latitude)
+          if (rid == null) { closeInfoWin(); return }
+          buildAssign()
+          const r = findRegionAny(rid)
+          setActiveRegion(rid)
+          highlightRegion(rid)
+          flashPoints([p])
+          showPointInfo(p, rid, r ? r.weight : null)
+        })
         pointLayerRef.current.push(cm)
       })
+      if (featuresRef.current.length) buildAssign()
     }
   }
   refreshRef.current = refreshPointLayer

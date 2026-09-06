@@ -53,6 +53,7 @@ def _normalize(e: dict) -> dict:
         "contact": e.get("contact"),
         "latitude": e.get("latitude"),
         "longitude": e.get("longitude"),
+        "weight": float(e.get("weight", 1.0)),  # 事件业务量权重（因果联动算「点对片区负载贡献」）
         "status": e.get("status", "active"),
         "created_at": e.get("created_at", "2026-01-01T00:00:00"),
     }
