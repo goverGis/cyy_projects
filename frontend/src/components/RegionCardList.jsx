@@ -100,7 +100,16 @@ function TypeIcon({ type }) {
   }
 }
 
-export default function RegionCardList({ regions, onClick, activeId, compact = false }) {
+export default function RegionCardList({
+  regions,
+  onClick,
+  activeId,
+  compact = false,
+  sortBy = 'id',       // 'load' | 'weight' | 'points' | 'id'
+  statusFilter = 'all', // 'all' | 'over' | 'warn' | 'low' | 'ok'
+  poiType = null,       // string | null — POI 模式下按类型过滤
+  keyword = '',         // 模糊匹配片区号（如 "12"）或类型名（"商场"）
+}) {
   if (!regions || !regions.length) return null
 
   const maxWeight = Math.max(...regions.map((r) => r.weight || 0), 1)
@@ -110,16 +119,48 @@ export default function RegionCardList({ regions, onClick, activeId, compact = f
   const hiT = quantile(0.8)
   const loT = quantile(0.4)
 
+  // 预计算每片状态/比率，供排序 + 过滤共用
+  const decorated = regions.map((r, i) => {
+    const ratio = r.load_ratio != null
+      ? r.load_ratio
+      : (r.capacity ? r.weight / r.capacity : r.weight / maxWeight)
+    const st = statusOf(r, ratio, hiT, loT)
+    return { r, i, ratio, st }
+  })
+
+  // 排序（按用户选择；默认按 region_id 原序）
+  const cmp = (a, b) => {
+    switch (sortBy) {
+      case 'load': return (b.ratio || 0) - (a.ratio || 0)
+      case 'weight': return (b.r.weight || 0) - (a.r.weight || 0)
+      case 'points': return (b.r.point_count || 0) - (a.r.point_count || 0)
+      default: return (a.r.region_id ?? a.i) - (b.r.region_id ?? b.i)
+    }
+  }
+  let list = [...decorated].sort(cmp)
+
+  // 过滤：状态 / POI 类型 / 关键词
+  const kw = (keyword || '').trim().toLowerCase()
+  list = list.filter(({ r, st }) => {
+    if (statusFilter !== 'all' && st.cls !== statusFilter) return false
+    if (poiType && r.poi_type !== poiType) return false
+    if (kw) {
+      const num = String((r.region_id ?? 0) + 1)
+      const label = (r.poi_type ? (POI_LABELS[r.poi_type] || r.poi_type) : '') + ' 片区' + num
+      if (!num.includes(kw) && !label.toLowerCase().includes(kw)) return false
+    }
+    return true
+  })
+
+  if (!list.length) {
+    return <div className="rc-empty">没有匹配的片区 · 试着放宽筛选条件</div>
+  }
+
   return (
     <div className="region-grid">
-      {regions.map((r, i) => {
+      {list.map(({ r, i, ratio, st }) => {
         const type = r.poi_type
         const color = type ? POI_COLORS[type] || regionColor(i) : regionColor(r.region_id ?? i)
-        // 状态：容量模式看负载率；POI 模式看权重分位（高/中/低密度）
-        const ratio = r.load_ratio != null
-          ? r.load_ratio
-          : (r.capacity ? r.weight / r.capacity : r.weight / maxWeight)
-        const st = statusOf(r, ratio, hiT, loT)
         const pct = Math.max(0, Math.min(100, Math.round((ratio || 0) * 100)))
         const pctLabel = (r.load_ratio != null || r.capacity != null) ? '负载' : '规模'
         const lng = r.centroid && r.centroid[0]
